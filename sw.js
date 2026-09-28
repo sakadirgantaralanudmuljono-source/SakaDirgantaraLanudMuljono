@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'saka-pwa-v1.2.0';
+const CACHE_VERSION = 'saka-pwa-v1.3.2';
 const SHELL_CACHE = CACHE_VERSION + '-shell';
 const STATIC_CACHE = CACHE_VERSION + '-static';
 const APP_SHELL = [

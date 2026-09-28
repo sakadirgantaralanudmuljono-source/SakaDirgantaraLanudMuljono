@@ -33,7 +33,7 @@ function classifyHtml(raw, status, finalUrl) {
   if (status === 404 || /page not found|requested file does not exist|file you have requested does not exist/i.test(raw || '')) {
     return { code: 'GAS_DEPLOYMENT_NOT_FOUND', message: 'URL deployment Apps Script tidak ditemukan/tidak aktif.' };
   }
-  return { code: 'GAS_HEALTH_NOT_JSON', message: 'Health check menerima HTML. Deployment kemungkinan belum diperbarui ke backend terbaru (v3.7.0).' };
+  return { code: 'GAS_HEALTH_NOT_JSON', message: 'Health check menerima HTML. Deployment kemungkinan belum diperbarui ke backend terbaru (v3.8.1).' };
 }
 
 export default async function handler(req, res) {

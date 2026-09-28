@@ -20,7 +20,7 @@ const browserStorage = (() => {
   };
 })();
 
-const UI_VERSION = '3.7.0';
+const UI_VERSION = '3.8.2';
 let systemLoadingTimer = null;
 let dataLoadGeneration = 0;
 let moduleLoadRequests = {};
@@ -82,7 +82,7 @@ const VIEW_MODULE_DEPENDENCIES = {
   inventaris: ['inventaris','kegiatanInventaris'],
   surat: ['surat'],
   pengurus: ['pengurus'],
-  users: ['users','anggota']
+  users: ['users']
 };
 
 const FORM_MODULE_DEPENDENCIES = {
@@ -93,13 +93,16 @@ const FORM_MODULE_DEPENDENCIES = {
   inventaris: ['inventaris'],
   surat: ['surat'],
   pengurus: ['pengurus','anggota'],
-  users: ['users','anggota']
+  users: ['users']
 };
 
 const state = {
   token: browserStorage.getItem('saka_v2_token') || '',
   user: null,
   permissions: {},
+  userMemberOptions: [],
+  userMemberOptionsLoaded: false,
+  userMemberOptionsRequest: null,
   modules: createModuleState(),
   dashboardMeta: createDashboardState(),
   penilaian: createPenilaianState(),
@@ -457,9 +460,11 @@ function serverCall(method, ...args) {
    LOGIN
 ===================================================== */
 
+
 function renderLogin() {
+  const lastUsername = browserStorage.getItem('saka_last_username') || '';
   document.getElementById('appRoot').innerHTML = `
-    <div class="auth-shell">
+    <div class="auth-shell auth-shell-modern">
 
       <section class="auth-visual">
         <div class="visual-brand">
@@ -474,27 +479,48 @@ function renderLogin() {
         </div>
 
         <div class="visual-copy">
-          <span class="eyebrow">Organization Management System</span>
+          <span class="eyebrow">Modern Organization Workspace</span>
 
           <h1>
-            Satu sistem untuk
-            <span>organisasi yang lebih tertib.</span>
+            Kelola organisasi dengan
+            <span>alur yang lebih cepat & rapi.</span>
           </h1>
 
           <p>
-            Kelola anggota, kegiatan, absensi QR, administrasi surat,
-            inventaris, struktur pengurus, dan keuangan dalam satu web app.
+            Satu sistem untuk anggota, kegiatan, absensi, inventaris, surat, dan laporan.
+            Dibuat agar lebih ringan, lebih mudah dipahami, dan nyaman dipakai dari desktop maupun mobile.
           </p>
+
+          <div class="auth-feature-chips" aria-label="Fitur utama">
+            <span>Absensi GPS</span>
+            <span>Inventaris</span>
+            <span>Keuangan</span>
+            <span>PWA</span>
+          </div>
         </div>
 
-        <div style="position:relative;z-index:2;color:#5f7a91;font-size:10px;">
+        <div class="auth-metrics" aria-label="Keunggulan sistem">
+          <div class="auth-metric-card">
+            <strong>Lebih cepat</strong>
+            <small>Refresh data tanpa terasa memutus alur kerja utama.</small>
+          </div>
+          <div class="auth-metric-card">
+            <strong>Lebih rapi</strong>
+            <small>UI clean, fokus pada data yang paling sering dipakai.</small>
+          </div>
+          <div class="auth-metric-card">
+            <strong>Lebih aman</strong>
+            <small>Akses per role tetap terjaga untuk admin, pengurus, dan anggota.</small>
+          </div>
+        </div>
+
+        <div class="auth-footer-note">
           SAKA Dirgantara Management System • Version ${UI_VERSION}
         </div>
       </section>
 
-
       <section class="auth-panel">
-        <div class="auth-card">
+        <div class="auth-card auth-card-modern">
 
           <div class="mobile-logo visual-brand">
             <div class="brand-mark">
@@ -507,35 +533,69 @@ function renderLogin() {
             </div>
           </div>
 
-          <h2>Masuk ke sistem</h2>
+          <div class="auth-card-head">
+            <span class="auth-badge">Akses Sistem</span>
+            <h2>Masuk ke dashboard</h2>
+            <p>
+              Gunakan akun yang telah didaftarkan administrator. Sistem akan mengingat username terakhir di perangkat ini.
+            </p>
+          </div>
 
-          <p>
-            Gunakan akun yang telah didaftarkan oleh administrator.
-          </p>
-
-          <form onsubmit="handleLogin(event)">
-
+          <form class="auth-form" onsubmit="handleLogin(event)">
             <div class="auth-field">
-              <label>USERNAME</label>
-              <input
-                class="auth-input"
-                name="username"
-                autocomplete="username"
-                required
-                placeholder="Masukkan username"
-              >
+              <label for="loginUsername">USERNAME</label>
+              <div class="input-shell">
+                <span class="material-symbols-rounded auth-input-icon" aria-hidden="true">person</span>
+                <input
+                  class="auth-input"
+                  id="loginUsername"
+                  name="username"
+                  autocomplete="username"
+                  required
+                  autofocus
+                  value="${escapeHtml(lastUsername)}"
+                  placeholder="Masukkan username"
+                >
+              </div>
             </div>
 
             <div class="auth-field">
-              <label>PASSWORD</label>
-              <input
-                class="auth-input"
-                name="password"
-                type="password"
-                autocomplete="current-password"
-                required
-                placeholder="Masukkan password"
-              >
+              <div class="auth-field-top">
+                <label for="loginPassword">PASSWORD</label>
+                <small>Ketik sandi akun Anda</small>
+              </div>
+              <div class="input-shell input-shell-password">
+                <span class="material-symbols-rounded auth-input-icon" aria-hidden="true">lock</span>
+                <input
+                  class="auth-input auth-input-password"
+                  id="loginPassword"
+                  name="password"
+                  type="password"
+                  autocomplete="current-password"
+                  required
+                  placeholder="Masukkan password"
+                >
+                <button
+                  class="auth-password-toggle"
+                  id="loginPasswordToggle"
+                  type="button"
+                  onclick="togglePasswordVisibility('loginPassword','loginPasswordToggle')"
+                  aria-label="Tampilkan password"
+                >
+                  <span class="material-symbols-rounded" aria-hidden="true">visibility</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="auth-helper-row">
+              <div class="auth-helper-item">
+                <span class="material-symbols-rounded" aria-hidden="true">schedule</span>
+                Login cepat & responsif
+              </div>
+              <div class="auth-helper-item">
+                <span class="material-symbols-rounded" aria-hidden="true">verified_user</span>
+                Hak akses sesuai role
+              </div>
             </div>
 
             <button
@@ -544,14 +604,16 @@ function renderLogin() {
               type="submit"
             >
               <span class="material-symbols-rounded">login</span>
-              Masuk
+              Masuk ke Sistem
             </button>
           </form>
 
-          <div class="login-note">
-            Instalasi baru: jika database belum pernah dibuat,
-            buka editor Apps Script dan jalankan fungsi
-            <strong>setupSystem_()</strong> satu kali dari Apps Script Editor.
+          <div class="login-note login-note-modern">
+            <div>
+              <strong>Setup awal</strong>
+              <p>Jika database belum pernah dibuat, jalankan <strong>setupSystem_()</strong> satu kali dari Apps Script Editor.</p>
+            </div>
+            <span class="material-symbols-rounded" aria-hidden="true">rocket_launch</span>
           </div>
 
         </div>
@@ -560,18 +622,37 @@ function renderLogin() {
   `;
 }
 
+function togglePasswordVisibility(inputId, toggleId) {
+  const input = document.getElementById(inputId);
+  const toggle = document.getElementById(toggleId);
+  if (!input || !toggle) return;
+  const icon = toggle.querySelector('.material-symbols-rounded');
+  const isHidden = input.type === 'password';
+  input.type = isHidden ? 'text' : 'password';
+  toggle.setAttribute('aria-label', isHidden ? 'Sembunyikan password' : 'Tampilkan password');
+  if (icon) icon.textContent = isHidden ? 'visibility_off' : 'visibility';
+}
+
+
 async function handleLogin(event) {
   event.preventDefault();
 
   const form = event.target;
   const button = document.getElementById('loginButton');
+  const payload = Object.fromEntries(new FormData(form).entries());
+  const username = String(payload.username || '').trim();
 
-  const payload = Object.fromEntries(
-    new FormData(form).entries()
-  );
+  if (!username || !String(payload.password || '').trim()) {
+    showToast('Username dan password wajib diisi.', 'warning');
+    return;
+  }
 
   button.disabled = true;
-  button.textContent = 'Memeriksa akun...';
+  button.classList.add('is-loading');
+  button.innerHTML = `
+    <span class="material-symbols-rounded spin">progress_activity</span>
+    Memeriksa akun...
+  `;
 
   try {
     const result = await serverCall('login', payload);
@@ -579,10 +660,8 @@ async function handleLogin(event) {
     state.token = result.token;
     state.user = result.user;
 
-    browserStorage.setItem(
-      'saka_v2_token',
-      state.token
-    );
+    browserStorage.setItem('saka_v2_token', state.token);
+    browserStorage.setItem('saka_last_username', username);
 
     await enterApp();
 
@@ -592,9 +671,10 @@ async function handleLogin(event) {
   } finally {
     if (button) {
       button.disabled = false;
+      button.classList.remove('is-loading');
       button.innerHTML = `
         <span class="material-symbols-rounded">login</span>
-        Masuk
+        Masuk ke Sistem
       `;
     }
   }
@@ -611,11 +691,18 @@ async function doLogout() {
   renderLogin();
 }
 
+function openBackendHealthCheck() {
+  window.open('/api/health', '_blank', 'noopener,noreferrer');
+}
+
 function clearSession() {
   stopSystemLoading();
   state.token = '';
   state.user = null;
   state.permissions = {};
+  state.userMemberOptions = [];
+  state.userMemberOptionsLoaded = false;
+  state.userMemberOptionsRequest = null;
   state.data = emptyAppData();
   state.modules = createModuleState();
   state.dashboardMeta = createDashboardState();
@@ -664,12 +751,27 @@ async function enterApp() {
       renderLogin();
       return;
     }
+    const backendDiagnostic = /\[GAS_|Apps Script|gateway|backend/i.test(String(error.message || ''));
     document.getElementById('appRoot').innerHTML = `
-      <div class="setup-card">
+      <div class="setup-card backend-error-card">
+        <div class="setup-icon backend-error-icon">
+          <span class="material-symbols-rounded">cloud_off</span>
+        </div>
+        <span class="backend-error-badge">Koneksi Backend</span>
         <h2>Dashboard belum berhasil dimuat</h2>
         <p>${escapeHtml(error.message)}</p>
-        <button class="btn btn-primary" type="button" onclick="enterApp()">Coba Lagi</button>
-        <button class="btn btn-light" type="button" onclick="doLogout()">Kembali ke Login</button>
+        <div class="backend-error-actions">
+          <button class="btn btn-primary" type="button" onclick="enterApp()">
+            <span class="material-symbols-rounded">refresh</span>Coba Lagi
+          </button>
+          ${backendDiagnostic ? `<button class="btn btn-light" type="button" onclick="openBackendHealthCheck()">
+            <span class="material-symbols-rounded">monitor_heart</span>Tes Koneksi Backend
+          </button>` : ''}
+          <button class="btn btn-light" type="button" onclick="doLogout()">
+            <span class="material-symbols-rounded">logout</span>Kembali ke Login
+          </button>
+        </div>
+        ${backendDiagnostic ? `<p class="backend-error-help">Jika tes koneksi mengembalikan HTML atau meminta login Google, perbarui deployment Apps Script ke Web App production dan pastikan aksesnya dapat dipanggil tanpa login.</p>` : ''}
       </div>`;
   } finally {
     if (isCurrentDataLoad(token, generation)) stopSystemLoading();
@@ -791,7 +893,7 @@ function renderAppShell() {
             ${!isMember ? `<button id="notificationBell" class="topbar-action icon-button notification-bell" type="button" onclick="openActionCenter()" title="Notification & Action Center" aria-label="Buka Notification & Action Center">
               <span class="material-symbols-rounded">notifications</span><span id="notificationBadge" class="notification-count" hidden></span>
             </button>` : ''}
-            <button class="topbar-action icon-button" type="button" onclick="refreshData()" title="Muat ulang data" aria-label="Muat ulang data">
+            <button class="topbar-action icon-button" data-refresh-button="true" type="button" onclick="refreshData()" title="Muat ulang data" aria-label="Muat ulang data">
               <span class="material-symbols-rounded">refresh</span>
             </button>
 
@@ -835,6 +937,17 @@ function renderAppShell() {
     applyResponsiveMode();
     repairScrollLockState();
   });
+}
+
+
+function setRefreshButtonLoading(isLoading) {
+  const button = document.querySelector('[data-refresh-button="true"]');
+  if (!button) return;
+  button.disabled = !!isLoading;
+  button.classList.toggle('is-loading', !!isLoading);
+  button.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+  const icon = button.querySelector('.material-symbols-rounded');
+  if (icon) icon.textContent = isLoading ? 'autorenew' : 'refresh';
 }
 
 function navButton(view, icon, label) {
@@ -1156,14 +1269,20 @@ async function ensureDashboardLoaded(force = false) {
   }
 }
 
+
 async function refreshData() {
   scheduleNotificationRefresh();
   const view = state.view;
+  setRefreshButtonLoading(true);
 
   // Maintenance sudah memiliki Cek Struktur / Update Struktur sendiri.
   // Tombol refresh global cukup menggambar ulang halaman tanpa request Dashboard.
   if (view === 'maintenance' || view === 'settings') {
-    renderSettings();
+    try {
+      renderSettings();
+    } finally {
+      setRefreshButtonLoading(false);
+    }
     return;
   }
 
@@ -1175,7 +1294,7 @@ async function refreshData() {
   markAllModulesDirty();
   markDashboardDirty();
   markPenilaianDirty();
-  showLoading();
+  showLoading({ preserve: true, label: 'Menyegarkan data...' });
 
   try {
     if (view === 'dashboard' || isRole('ANGGOTA')) {
@@ -1189,6 +1308,9 @@ async function refreshData() {
     if (isCurrentDataLoad(token, generation) && state.view === view) renderView();
   } catch (error) {
     if (isCurrentDataLoad(token, generation) && state.view === view) handleDataLoadError(error);
+  } finally {
+    hideLoadingOverlay();
+    setRefreshButtonLoading(false);
   }
 }
 
@@ -5236,12 +5358,49 @@ async function openRolePermissionSettings() {
   } catch (error) { showToast(error.message || 'Gagal memuat hak akses.', 'error'); }
 }
 
+
+async function ensureUserMemberOptionsLoaded(force = false) {
+  if (!state.token || !isRole('ADMIN')) return [];
+  if (!force && state.userMemberOptionsLoaded) return state.userMemberOptions || [];
+  if (!force && state.userMemberOptionsRequest) return state.userMemberOptionsRequest;
+
+  const token = state.token;
+  const request = serverCall('getUserMemberOptions', token).then(payload => {
+    if (token !== state.token) return [];
+    state.userMemberOptions = Array.isArray(payload && payload.rows) ? payload.rows : [];
+    state.userMemberOptionsLoaded = true;
+    return state.userMemberOptions;
+  });
+
+  state.userMemberOptionsRequest = request;
+  try {
+    return await request;
+  } finally {
+    if (state.userMemberOptionsRequest === request) state.userMemberOptionsRequest = null;
+  }
+}
+
+function warmUserMemberOptions() {
+  if (state.userMemberOptionsLoaded || state.userMemberOptionsRequest || !isRole('ADMIN')) return;
+  ensureUserMemberOptionsLoaded().then(() => {
+    if (state.view === 'users') renderUsers();
+  }).catch(() => {
+    // Daftar pengguna tetap dapat dipakai walau label anggota gagal dimuat.
+  });
+}
+
+
 function resolveUserMemberLabel(anggotaId) {
   const id = String(anggotaId || '').trim();
   if (!id) return '-';
-  const member = (state.data.anggota || []).find(item => String(item.ID || '') === id);
-  return member ? `${member.Nama || '-'}${member.NTA ? ' • ' + member.NTA : ''}` : 'Data anggota tidak ditemukan';
+
+  const member = (state.userMemberOptions || []).find(item => String(item.ID || '') === id) ||
+    (state.data.anggota || []).find(item => String(item.ID || '') === id);
+
+  if (member) return `${member.Nama || '-'}${member.NTA ? ' • ' + member.NTA : ''}`;
+  return state.userMemberOptionsLoaded ? 'Data anggota tidak ditemukan' : 'Anggota tertaut';
 }
+
 
 function renderUsers() {
   if (!isRole('ADMIN')) {
@@ -5313,6 +5472,8 @@ function renderUsers() {
       </table>
     `
   });
+
+  warmUserMemberOptions();
 }
 
 
@@ -5738,6 +5899,28 @@ async function openForm(type, id = '') {
       return;
     }
   }
+
+if (type === 'users' && !state.userMemberOptionsLoaded) {
+  const token = state.token;
+  const generation = dataLoadGeneration;
+  const modalGeneration = modalLoadGeneration;
+  if (!document.getElementById('modalBackdrop').classList.contains('show')) {
+    openCustomModal('Memuat formulir', 'Menyiapkan daftar anggota...', loadingHtml(150));
+  } else {
+    document.getElementById('modalSubtitle').textContent = 'Menyiapkan daftar anggota...';
+    document.getElementById('modalBody').innerHTML = loadingHtml(150);
+  }
+  try {
+    await ensureUserMemberOptionsLoaded();
+    if (modalGeneration !== modalLoadGeneration || !isCurrentDataLoad(token, generation)) return;
+  } catch (error) {
+    if (modalGeneration !== modalLoadGeneration || !isCurrentDataLoad(token, generation)) return;
+    closeModal();
+    showToast(error.message || 'Gagal memuat daftar anggota.', 'error');
+    return;
+  }
+}
+
   if (type === 'inventaris') {
     const generation = modalLoadGeneration;
     const token = state.token;
@@ -6115,7 +6298,7 @@ function getFormDefinition(type, item = {}) {
         customSelectField(
           'AnggotaID',
           'Tautkan Anggota (wajib untuk ANGGOTA)',
-          (state.data.anggota || []).map(member => ({
+          ((state.userMemberOptionsLoaded ? state.userMemberOptions : state.data.anggota) || []).map(member => ({
             value: member.ID,
             label: `${member.Nama} — ${member.NTA || 'NTA belum tersedia'}`
           })),
@@ -7117,12 +7300,46 @@ function loadingHtml(height = 300) {
   `;
 }
 
-function showLoading() {
-  const content = document.getElementById('content');
 
-  if (content) {
-    content.innerHTML = loadingHtml();
+function showLoading(options = {}) {
+  const content = document.getElementById('content');
+  if (!content) return;
+
+  const preserve = !!options.preserve;
+  const label = escapeHtml(options.label || 'Memuat data...');
+
+  if (preserve && content.children.length) {
+    content.classList.add('content-is-refreshing');
+    const existing = content.querySelector('.content-refresh-overlay');
+    if (existing) {
+      const labelNode = existing.querySelector('.loading-label');
+      if (labelNode) labelNode.textContent = options.label || 'Memuat data...';
+      return;
+    }
+
+    content.insertAdjacentHTML('beforeend', `
+      <div class="content-refresh-overlay" role="status" aria-live="polite" aria-busy="true">
+        <div class="content-refresh-card">
+          <span class="material-symbols-rounded spin" aria-hidden="true">progress_activity</span>
+          <div>
+            <strong>Menyegarkan tampilan</strong>
+            <span class="loading-label">${label}</span>
+          </div>
+        </div>
+      </div>
+    `);
+    return;
   }
+
+  content.innerHTML = loadingHtml();
+}
+
+function hideLoadingOverlay() {
+  const content = document.getElementById('content');
+  if (!content) return;
+  content.classList.remove('content-is-refreshing');
+  const overlay = content.querySelector('.content-refresh-overlay');
+  if (overlay) overlay.remove();
 }
 
 function renderError(message) {

@@ -28,6 +28,7 @@ const ALLOWED_METHODS = new Set([
   "getKegiatanDokumentasiPreview",
   "getKegiatanReportData",
   "getModulesData",
+  "getUserMemberOptions",
   "getPenilaianBulanan",
   "getPenilaianPdfPayload",
   "getPublicCheckinData",
