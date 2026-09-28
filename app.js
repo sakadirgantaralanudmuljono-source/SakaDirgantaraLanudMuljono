@@ -55,7 +55,7 @@ const EXCEL_TEMPLATE_COLUMNS = {
   Pengurus: [
     'ID','AnggotaID','NTA','Nama','Jabatan','Bidang','Periode','Urutan','Status'
   ],
-  Users: ['ID','Username','Nama','Role','Status','Password']
+  Users: ['ID','Username','Nama','Role','Status','AnggotaID','Password']
 };
 
 
@@ -82,7 +82,7 @@ const VIEW_MODULE_DEPENDENCIES = {
   inventaris: ['inventaris','kegiatanInventaris'],
   surat: ['surat'],
   pengurus: ['pengurus'],
-  users: ['users']
+  users: ['users','anggota']
 };
 
 const FORM_MODULE_DEPENDENCIES = {
@@ -93,17 +93,11 @@ const FORM_MODULE_DEPENDENCIES = {
   inventaris: ['inventaris'],
   surat: ['surat'],
   pengurus: ['pengurus','anggota'],
-  users: ['users']
+  users: ['users','anggota']
 };
 
-// v3.6: token rahasia tidak lagi dipertahankan di localStorage. Token lama
-// hanya dibaca sekali untuk migrasi ke cookie HttpOnly melalui gateway Vercel.
-const LEGACY_SESSION_TOKEN = browserStorage.getItem('saka_v2_token') || '';
-if (LEGACY_SESSION_TOKEN) browserStorage.removeItem('saka_v2_token');
-const COOKIE_SESSION_MARKER = 'cookie-session';
-
 const state = {
-  token: LEGACY_SESSION_TOKEN || (browserStorage.getItem('saka_session_active') === '1' ? COOKIE_SESSION_MARKER : ''),
+  token: browserStorage.getItem('saka_v2_token') || '',
   user: null,
   permissions: {},
   modules: createModuleState(),
@@ -192,55 +186,11 @@ async function initPwa() {
 
   if ('serviceWorker' in navigator) {
     try {
-      const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-      setupPwaUpdateManager(registration);
-      // Cek versi terbaru saat aplikasi dibuka, tanpa mengganggu penggunaan normal.
-      registration.update().catch(() => {});
+      await navigator.serviceWorker.register('/sw.js', { scope: '/' });
     } catch (error) {
       console.warn('Service worker gagal didaftarkan:', error);
     }
   }
-}
-
-let pwaReloadingForUpdate = false;
-
-function setupPwaUpdateManager(registration) {
-  const showWaiting = () => {
-    if (registration.waiting && navigator.serviceWorker.controller) {
-      const banner = document.getElementById('pwaUpdateBanner');
-      if (banner) banner.hidden = false;
-    }
-  };
-
-  showWaiting();
-
-  registration.addEventListener('updatefound', () => {
-    const worker = registration.installing;
-    if (!worker) return;
-    worker.addEventListener('statechange', () => {
-      if (worker.state === 'installed' && navigator.serviceWorker.controller) {
-        showWaiting();
-      }
-    });
-  });
-
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (pwaReloadingForUpdate) return;
-    pwaReloadingForUpdate = true;
-    window.location.reload();
-  });
-}
-
-function applyPwaUpdate() {
-  if (!('serviceWorker' in navigator)) return;
-  navigator.serviceWorker.getRegistration().then(registration => {
-    if (!registration || !registration.waiting) {
-      const banner = document.getElementById('pwaUpdateBanner');
-      if (banner) banner.hidden = true;
-      return;
-    }
-    registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-  }).catch(() => {});
 }
 
 async function installPwa() {
@@ -467,7 +417,6 @@ function serverCall(method, ...args) {
       'Accept': 'application/json'
     },
     cache: 'no-store',
-    credentials: 'same-origin',
     body
   }).then(async response => {
     const raw = await response.text();
@@ -624,11 +573,13 @@ async function handleLogin(event) {
   try {
     const result = await serverCall('login', payload);
 
-    state.token = result.token || COOKIE_SESSION_MARKER;
+    state.token = result.token;
     state.user = result.user;
 
-    browserStorage.setItem('saka_session_active', '1');
-    browserStorage.removeItem('saka_v2_token');
+    browserStorage.setItem(
+      'saka_v2_token',
+      state.token
+    );
 
     await enterApp();
 
@@ -673,7 +624,6 @@ function clearSession() {
   dashboardLoadRequest = null;
   closeModal();
   browserStorage.removeItem('saka_v2_token');
-  browserStorage.removeItem('saka_session_active');
 }
 
 
@@ -700,8 +650,6 @@ async function enterApp() {
     if (!isCurrentDataLoad(token, generation)) return;
     Object.assign(state.data, data);
     state.user = data.user;
-    browserStorage.setItem('saka_session_active', '1');
-    browserStorage.removeItem('saka_v2_token');
     await loadRolePermissions();
     markDashboardClean();
     renderAppShell();
@@ -744,11 +692,12 @@ async function loadRolePermissions() {
 
 function renderAppShell() {
   const isAdmin = isRole('ADMIN');
+  const isMember = isRole('ANGGOTA');
   const initials = getInitials(state.user && state.user.Nama);
   const collapsedClass = state.ui && state.ui.sidebarCollapsed ? ' sidebar-collapsed' : '';
 
   document.getElementById('appRoot').innerHTML = `
-    <div class="app${collapsedClass}" id="appShell">
+    <div class="app${collapsedClass}${isMember ? ' member-app' : ''}" id="appShell">
 
       <aside class="sidebar" id="sidebar" aria-label="Navigasi utama">
         <div class="sidebar-head">
@@ -771,15 +720,18 @@ function renderAppShell() {
           <div class="nav-section">
             <div class="nav-label">Utama</div>
             <nav class="nav">
-              ${navButton('dashboard', 'space_dashboard', 'Dashboard')}
-              ${canViewModule('anggota') ? navButton('anggota', 'groups', 'Anggota') : ''}
-              ${canViewModule('kegiatan') ? navButton('kegiatan', 'calendar_month', 'Kegiatan') : ''}
-              ${canViewModule('absensi') ? navButton('absensi', 'fact_check', 'Absensi') : ''}
-              ${canViewModule('penilaian') ? navButton('penilaian', 'workspace_premium', 'Penilaian') : ''}
+              ${navButton('dashboard', 'space_dashboard', isMember ? 'Beranda' : 'Dashboard')}
+              ${isMember ? navButton('member-profile', 'person', 'Profil Saya') : ''}
+              ${isMember ? navButton('member-attendance', 'fact_check', 'Kehadiran Saya') : ''}
+              ${isMember ? navButton('member-skk', 'workspace_premium', 'Progres SKK') : ''}
+              ${!isMember && canViewModule('anggota') ? navButton('anggota', 'groups', 'Anggota') : ''}
+              ${!isMember && canViewModule('kegiatan') ? navButton('kegiatan', 'calendar_month', 'Kegiatan') : ''}
+              ${!isMember && canViewModule('absensi') ? navButton('absensi', 'fact_check', 'Absensi') : ''}
+              ${!isMember && canViewModule('penilaian') ? navButton('penilaian', 'workspace_premium', 'Penilaian') : ''}
             </nav>
           </div>
 
-          <div class="nav-section">
+          ${!isMember ? `<div class="nav-section">
             <div class="nav-label">Administrasi</div>
             <nav class="nav">
               ${canViewModule('kas') ? navButton('kas', 'account_balance_wallet', 'Kas Organisasi') : ''}
@@ -789,7 +741,7 @@ function renderAppShell() {
               ${isAdmin ? navButton('users', 'admin_panel_settings', 'Pengguna') : ''}
               ${isAdmin ? navButton('maintenance', 'settings', 'System Maintenance') : ''}
             </nav>
-          </div>
+          </div>` : ''}
 
           <div class="nav-section">
             <div class="nav-label">Tampilan</div>
@@ -838,14 +790,14 @@ function renderAppShell() {
 
             <div class="topbar-title-wrap">
               <span class="topbar-kicker">SAKA Dirgantara</span>
-              <h1 id="pageTitle">Dashboard</h1>
+              <h1 id="pageTitle">${isMember ? 'Beranda' : 'Dashboard'}</h1>
             </div>
           </div>
 
           <div class="topbar-right">
-            <button id="notificationBell" class="topbar-action icon-button notification-bell" type="button" onclick="openActionCenter()" title="Notification & Action Center" aria-label="Buka Notification & Action Center">
+            ${!isMember ? `<button id="notificationBell" class="topbar-action icon-button notification-bell" type="button" onclick="openActionCenter()" title="Notification & Action Center" aria-label="Buka Notification & Action Center">
               <span class="material-symbols-rounded">notifications</span><span id="notificationBadge" class="notification-count" hidden></span>
-            </button>
+            </button>` : ''}
             <button class="topbar-action icon-button" type="button" onclick="refreshData()" title="Muat ulang data" aria-label="Muat ulang data">
               <span class="material-symbols-rounded">refresh</span>
             </button>
@@ -872,19 +824,19 @@ function renderAppShell() {
 
       <nav class="mobile-bottom-nav" aria-label="Navigasi mobile">
         ${mobileNavButton('dashboard', 'space_dashboard', 'Beranda')}
-        ${mobileNavButton('anggota', 'groups', 'Anggota')}
-        ${mobileNavButton('kegiatan', 'calendar_month', 'Kegiatan')}
-        ${mobileNavButton('absensi', 'fact_check', 'Absensi')}
-        <button class="mobile-nav-item mobile-more-item" type="button" data-mobile-more="true" onclick="toggleSidebar()">
+        ${isMember ? mobileNavButton('member-profile', 'person', 'Profil') : mobileNavButton('anggota', 'groups', 'Anggota')}
+        ${isMember ? mobileNavButton('member-attendance', 'fact_check', 'Kehadiran') : mobileNavButton('kegiatan', 'calendar_month', 'Kegiatan')}
+        ${isMember ? mobileNavButton('member-skk', 'workspace_premium', 'SKK') : mobileNavButton('absensi', 'fact_check', 'Absensi')}
+        ${!isMember ? `<button class="mobile-nav-item mobile-more-item" type="button" data-mobile-more="true" onclick="toggleSidebar()">
           <span class="material-symbols-rounded">apps</span>
           <span>Lainnya</span>
-        </button>
+        </button>` : ''}
       </nav>
 
     </div>
   `;
 
-  scheduleNotificationRefresh();
+  if (!isMember) scheduleNotificationRefresh();
   syncNavigationActive(state.view);
   requestAnimationFrame(() => {
     applyResponsiveMode();
@@ -977,7 +929,7 @@ function getInitials(name) {
 function emptyAppData() {
   return {
     anggota: [], kegiatan: [], absensi: [], kas: [], inventaris: [], kegiatanInventaris: [],
-    surat: [], pengurus: [], users: [], dashboard: {}
+    surat: [], pengurus: [], users: [], dashboard: {}, memberPortal: null
   };
 }
 
@@ -1233,7 +1185,7 @@ async function refreshData() {
   showLoading();
 
   try {
-    if (view === 'dashboard') {
+    if (view === 'dashboard' || isRole('ANGGOTA')) {
       if (!await ensureDashboardLoaded(true)) return;
     } else if (view === 'penilaian') {
       if (!await ensurePenilaianLoaded(true)) return;
@@ -1275,6 +1227,7 @@ function applyLocalMutation(type, row, id, deleted = false) {
       Nama: row.Nama,
       Role: row.Role,
       Status: row.Status,
+      AnggotaID: row.AnggotaID || '',
       DibuatPada: row.DibuatPada,
       DiubahPada: row.DiubahPada
     };
@@ -1341,7 +1294,10 @@ function switchView(view, element) {
     surat: 'Administrasi Surat',
     pengurus: 'Struktur Pengurus',
     users: 'Manajemen Pengguna',
-    maintenance: 'System Maintenance'
+    maintenance: 'System Maintenance',
+    'member-profile': 'Profil Saya',
+    'member-attendance': 'Kehadiran Saya',
+    'member-skk': 'Progres SKK'
   };
 
   const pageTitle = document.getElementById('pageTitle');
@@ -1407,6 +1363,15 @@ async function renderView() {
     }
   }
   switch (state.view) {
+    case 'member-profile':
+      renderMemberProfile();
+      break;
+    case 'member-attendance':
+      renderMemberAttendance();
+      break;
+    case 'member-skk':
+      renderMemberSkk();
+      break;
     case 'anggota':
       renderAnggota();
       break;
@@ -2138,7 +2103,212 @@ function renderExcelImportReport(result) {
    DASHBOARD
 ===================================================== */
 
+
+function getMemberPortalData() {
+  const portal = state.data && state.data.memberPortal;
+  if (!portal || !portal.member) return null;
+  return portal;
+}
+
+function memberPortalUnavailable() {
+  const content = document.getElementById('content');
+  if (!content) return;
+  content.innerHTML = `
+    <div class="panel">
+      <div class="panel-body">
+        ${errorBox('Data portal anggota belum tersedia. Muat ulang halaman atau hubungi administrator bila masalah berlanjut.')}
+      </div>
+    </div>`;
+}
+
+function memberProgress(value) {
+  const percent = Math.max(0, Math.min(100, Number(value || 0)));
+  return `<div class="member-progress" aria-label="${percent}%"><span style="width:${percent}%"></span></div>`;
+}
+
+function memberInfoItem(icon, label, value) {
+  return `
+    <div class="member-info-item">
+      <span class="material-symbols-rounded">${icon}</span>
+      <div><small>${escapeHtml(label)}</small><strong>${escapeHtml(value || '-')}</strong></div>
+    </div>`;
+}
+
+function renderMemberDashboard() {
+  const portal = getMemberPortalData();
+  if (!portal) return memberPortalUnavailable();
+  const member = portal.member || {};
+  const attendance = portal.attendance || [];
+  const stats = portal.attendanceStats || {};
+  const upcoming = portal.upcoming || [];
+  const skk = portal.skk || {};
+  const skkStats = skk.stats || {};
+  const relevantTotal = Number(skkStats.relevantItems || skkStats.totalItems || 0);
+  const relevantDone = Number(skkStats.relevantItems ? skkStats.relevantCompletedItems : skkStats.completedItems || 0);
+  const skkPercent = Number(skkStats.percent || 0);
+
+  const agendaHtml = upcoming.length ? upcoming.slice(0, 4).map(item => `
+    <article class="member-agenda-item">
+      <div class="agenda-date-box"><strong>${escapeHtml(formatDayNumber(item.Tanggal))}</strong><span>${escapeHtml(formatShortMonth(item.Tanggal))}</span></div>
+      <div class="member-agenda-copy">
+        <strong>${escapeHtml(item.NamaKegiatan || 'Kegiatan')}</strong>
+        <span>${escapeHtml(item.Lokasi || 'Lokasi belum ditentukan')}</span>
+        <small>${escapeHtml(formatLongDate(item.Tanggal))}${item.PenanggungJawab ? ` • ${escapeHtml(item.PenanggungJawab)}` : ''}</small>
+      </div>
+      ${statusBadge(item.Status)}
+    </article>`).join('') : emptyDashboardState('event_busy','Belum ada agenda mendatang.');
+
+  const attendanceHtml = attendance.length ? attendance.slice(0, 5).map(item => `
+    <div class="member-history-row">
+      <div class="member-history-icon"><span class="material-symbols-rounded">${String(item.StatusKehadiran).toLowerCase()==='hadir'?'check_circle':'event_note'}</span></div>
+      <div class="member-history-copy"><strong>${escapeHtml(item.KegiatanNama || 'Kegiatan')}</strong><span>${escapeHtml(formatLongDate(item.Tanggal))}${item.Lokasi ? ` • ${escapeHtml(item.Lokasi)}` : ''}</span></div>
+      ${statusBadge(item.StatusKehadiran)}
+    </div>`).join('') : emptyDashboardState('fact_check','Belum ada riwayat kehadiran.');
+
+  document.getElementById('content').innerHTML = `
+    <div class="page-heading dashboard-heading member-welcome-heading">
+      <div>
+        <span class="dashboard-date">${escapeHtml(formatDashboardToday())}</span>
+        <h2>Halo, ${escapeHtml(member.Nama || state.user.Nama)}</h2>
+        <p>${escapeHtml(member.NTA || 'NTA belum tersedia')} • ${escapeHtml(member.Krida || 'Krida belum ditentukan')} • ${escapeHtml(member.Status || '-')}</p>
+      </div>
+      <div class="member-status-card">${statusBadge(member.Status)}</div>
+    </div>
+
+    <div class="stats-grid dashboard-kpi-grid member-kpi-grid">
+      ${statCard('percent','green','Kehadiran',`${Number(stats.rate || 0)}%`,`${Number(stats.Hadir || 0)} hadir dari ${Number(stats.total || 0)} pertemuan`,"switchViewByName('member-attendance')")}
+      ${statCard('check_circle','blue','Total Hadir',Number(stats.Hadir || 0),`${Number(stats.Izin || 0)} izin • ${Number(stats.Sakit || 0)} sakit` ,"switchViewByName('member-attendance')")}
+      ${statCard('workspace_premium','gold','Progres SKK',skk.available ? `${skkPercent}%` : '-',skk.available ? `${relevantDone} dari ${relevantTotal} butir sesuai Krida` : (skk.message || 'Belum tersedia'),"switchViewByName('member-skk')")}
+      ${statCard('event','cyan','Agenda Mendatang',upcoming.length,upcoming.length ? `Terdekat ${formatDate(upcoming[0].Tanggal)}` : 'Belum ada agenda')}
+    </div>
+
+    <div class="dashboard-section-grid primary member-dashboard-grid">
+      <section class="panel dashboard-panel">
+        <div class="panel-header"><div><h3>Agenda Mendatang</h3><p>Kegiatan yang dapat Anda persiapkan berikutnya</p></div><span class="dashboard-panel-total">${upcoming.length} agenda</span></div>
+        <div class="panel-body"><div class="member-agenda-list">${agendaHtml}</div></div>
+      </section>
+
+      <section class="panel dashboard-panel">
+        <div class="panel-header"><div><h3>Progress Saya</h3><p>Ringkasan kehadiran dan kecakapan</p></div></div>
+        <div class="panel-body">
+          <div class="member-progress-card">
+            <div class="member-progress-head"><div><small>KEHADIRAN</small><strong>${Number(stats.rate || 0)}%</strong></div><span>${Number(stats.total || 0)} catatan</span></div>
+            ${memberProgress(stats.rate)}
+          </div>
+          <div class="member-progress-card">
+            <div class="member-progress-head"><div><small>SKK ${member.Krida ? '• ' + escapeHtml(member.Krida) : ''}</small><strong>${skk.available ? skkPercent + '%' : '-'}</strong></div><span>${skk.available ? `${relevantDone}/${relevantTotal} butir` : 'Belum tersedia'}</span></div>
+            ${memberProgress(skk.available ? skkPercent : 0)}
+          </div>
+          <button class="dashboard-link-button" type="button" onclick="switchViewByName('member-skk')">Lihat detail progres SKK <span class="material-symbols-rounded">arrow_forward</span></button>
+        </div>
+      </section>
+    </div>
+
+    <section class="panel dashboard-panel member-recent-panel">
+      <div class="panel-header"><div><h3>Riwayat Kehadiran Terbaru</h3><p>Lima catatan terakhir pada kegiatan SAKA Dirgantara</p></div></div>
+      <div class="panel-body"><div class="member-history-list">${attendanceHtml}</div><button class="dashboard-link-button" type="button" onclick="switchViewByName('member-attendance')">Lihat semua riwayat <span class="material-symbols-rounded">arrow_forward</span></button></div>
+    </section>`;
+}
+
+function renderMemberProfile() {
+  const portal = getMemberPortalData();
+  if (!portal) return memberPortalUnavailable();
+  const m = portal.member || {};
+  document.getElementById('content').innerHTML = `
+    <div class="page-heading"><div><h2>Profil Saya</h2><p>Data keanggotaan yang tercatat pada sistem. Hubungi pengurus jika ada data yang perlu diperbarui.</p></div></div>
+    <section class="panel member-profile-card">
+      <div class="member-profile-hero">
+        <div class="member-profile-avatar">${escapeHtml(getInitials(m.Nama))}</div>
+        <div><span class="dashboard-eyebrow">ANGGOTA SAKA DIRGANTARA</span><h3>${escapeHtml(m.Nama || '-')}</h3><p>${escapeHtml(m.NTA || 'NTA belum tersedia')}</p></div>
+        <div>${statusBadge(m.Status)}</div>
+      </div>
+      <div class="panel-body member-info-grid">
+        ${memberInfoItem('badge','NTA',m.NTA)}
+        ${memberInfoItem('groups','Krida',m.Krida)}
+        ${memberInfoItem('military_tech','Jabatan',m.Jabatan)}
+        ${memberInfoItem('wc','Jenis Kelamin',m.JenisKelamin)}
+        ${memberInfoItem('cake','Tempat, Tanggal Lahir',[m.TempatLahir, m.TanggalLahir ? formatDate(m.TanggalLahir) : ''].filter(Boolean).join(', '))}
+        ${memberInfoItem('school','Sekolah / Instansi',m.SekolahInstansi)}
+        ${memberInfoItem('call','Telepon',m.Telepon)}
+        ${memberInfoItem('home','Alamat',m.Alamat)}
+        ${memberInfoItem('event','Tanggal Gabung',m.TanggalGabung ? formatLongDate(m.TanggalGabung) : '-')}
+        ${memberInfoItem('verified','Tanggal Pelantikan',m.TanggalPelantikan ? formatLongDate(m.TanggalPelantikan) : '-')}
+      </div>
+    </section>`;
+}
+
+function renderMemberAttendance() {
+  const portal = getMemberPortalData();
+  if (!portal) return memberPortalUnavailable();
+  const rows = portal.attendance || [];
+  const stats = portal.attendanceStats || {};
+  const body = rows.length ? rows.map((item,index) => `
+    <tr>
+      <td>${index + 1}</td>
+      <td><span class="table-name">${escapeHtml(item.KegiatanNama || 'Kegiatan')}</span><small class="member-table-meta">${escapeHtml(item.Lokasi || 'Lokasi -')}</small></td>
+      <td>${escapeHtml(formatLongDate(item.Tanggal))}</td>
+      <td>${statusBadge(item.StatusKehadiran)}</td>
+      <td>${escapeHtml(item.Catatan || '-')}</td>
+      <td>${escapeHtml(item.Metode || '-')}</td>
+    </tr>`).join('') : emptyTableRow(6,'Belum ada riwayat kehadiran.');
+
+  document.getElementById('content').innerHTML = `
+    <div class="page-heading"><div><h2>Kehadiran Saya</h2><p>Riwayat kehadiran pribadi. Data pada halaman ini hanya berasal dari akun anggota Anda.</p></div></div>
+    <div class="stats-grid dashboard-kpi-grid member-kpi-grid">
+      ${statCard('percent','green','Persentase Hadir',`${Number(stats.rate || 0)}%`,`${Number(stats.total || 0)} pertemuan tercatat`)}
+      ${statCard('check_circle','blue','Hadir',Number(stats.Hadir || 0))}
+      ${statCard('event_available','cyan','Izin / Sakit',Number(stats.Izin || 0) + Number(stats.Sakit || 0),`${Number(stats.Izin || 0)} izin • ${Number(stats.Sakit || 0)} sakit`)}
+      ${statCard('person_off','red','Alpa',Number(stats.Alpa || 0))}
+    </div>
+    <section class="panel">
+      <div class="panel-header"><div><h3>Riwayat Lengkap</h3><p>${rows.length} catatan kehadiran</p></div></div>
+      <div class="table-wrap"><table class="data-table"><thead><tr><th>No</th><th>Kegiatan</th><th>Tanggal</th><th>Status</th><th>Catatan</th><th>Metode</th></tr></thead><tbody>${body}</tbody></table></div>
+    </section>`;
+}
+
+function renderMemberSkk() {
+  const portal = getMemberPortalData();
+  if (!portal) return memberPortalUnavailable();
+  const member = portal.member || {};
+  const skk = portal.skk || {};
+  if (!skk.available) {
+    document.getElementById('content').innerHTML = `<div class="page-heading"><div><h2>Progres SKK</h2><p>Checklist kecakapan khusus pribadi.</p></div></div><div class="panel"><div class="panel-body">${errorBox(skk.message || 'Data SKK belum tersedia.')}</div></div>`;
+    return;
+  }
+
+  const completedRefs = new Set((skk.completion || []).map(item => String(item.ReferensiID || '')));
+  const memberKrida = String(member.Krida || '').trim().toLowerCase();
+  let catalog = (skk.catalog || []).filter(item => !memberKrida || String(item.Krida || '').trim().toLowerCase() === memberKrida);
+  if (!catalog.length) catalog = skk.catalog || [];
+  const groups = {};
+  catalog.forEach(item => {
+    const key = String(item.KelompokSKK || 'SKK');
+    (groups[key] ||= []).push(item);
+  });
+  const stats = skk.stats || {};
+  const total = catalog.length;
+  const done = catalog.filter(item => completedRefs.has(String(item.ID || ''))).length;
+  const percent = total ? Math.round(done / total * 100) : 0;
+  const groupHtml = Object.keys(groups).map(group => {
+    const items = groups[group];
+    const completed = items.filter(item => completedRefs.has(String(item.ID || ''))).length;
+    return `<section class="member-skk-group"><div class="member-skk-group-head"><div><h3>${escapeHtml(group)}</h3><p>${completed} dari ${items.length} butir selesai</p></div><strong>${items.length ? Math.round(completed/items.length*100) : 0}%</strong></div><div class="member-skk-list">${items.map(item => {
+      const checked = completedRefs.has(String(item.ID || ''));
+      return `<div class="member-skk-item ${checked ? 'is-complete' : ''}"><span class="material-symbols-rounded">${checked ? 'check_circle' : 'radio_button_unchecked'}</span><div><strong>${escapeHtml(item.Kode || 'SKK')}</strong><p>${escapeHtml(item.Butir || '-')}</p></div></div>`;
+    }).join('')}</div></section>`;
+  }).join('');
+
+  document.getElementById('content').innerHTML = `
+    <div class="page-heading"><div><h2>Progres SKK</h2><p>${escapeHtml(member.Krida || 'Semua Krida')} • progres checklist yang telah diverifikasi pengurus.</p></div></div>
+    <section class="panel member-skk-summary"><div class="panel-body"><div class="member-skk-summary-head"><div><span class="dashboard-eyebrow">PROGRES KECAKAPAN</span><h3>${done} / ${total} butir</h3><p>${Number(stats.totalEarnedPoints || 0)} poin SKK tercatat</p></div><strong>${percent}%</strong></div>${memberProgress(percent)}</div></section>
+    <div class="member-skk-groups">${groupHtml || emptyDashboardState('workspace_premium','Belum ada master SKK untuk Krida Anda.')}</div>`;
+}
+
 function renderDashboard() {
+  if (isRole('ANGGOTA')) {
+    renderMemberDashboard();
+    return;
+  }
   const d = state.data.dashboard || {};
   const upcoming = Array.isArray(d.kegiatanTerbaru) ? d.kegiatanTerbaru : [];
   const lastMeeting = d.pertemuanTerakhir || null;
@@ -2635,75 +2805,50 @@ function renderAnggota() {
   });
 }
 
-async function showMemberCard(id) {
+function showMemberCard(id) {
   const item = getItem('anggota', id);
-  if (!item) {
-    showToast('Data anggota tidak ditemukan.', 'error');
-    return;
-  }
-
-  let access = null;
-  try {
-    access = await serverCall('getMemberAccessCard', state.token, id);
-  } catch (error) {
-    // Kartu identitas tetap dapat dibuka jika PIN belum berhasil dimuat.
-    console.warn('PIN anggota gagal dimuat:', error);
-  }
 
   openCustomModal(
-    'Kartu Anggota Digital',
-    'Identitas anggota dan kredensial check-in QR.',
+    'Kartu Anggota',
+    'Pratinjau identitas anggota.',
     `
-      <div class="member-card member-card-v36">
+      <div class="member-card">
+
         <div class="card-top">
           <div class="card-org">
             <div class="brand-mark">
               <span class="material-symbols-rounded">flight</span>
             </div>
+
             <div>
               <strong>SAKA DIRGANTARA</strong>
-              <small>KARTU ANGGOTA DIGITAL</small>
+              <small>KARTU ANGGOTA</small>
             </div>
           </div>
-          <div class="card-type">V3.6</div>
+
+          <div class="card-type">MEMBER ID</div>
         </div>
 
-        <div class="member-card-main">
-          <div class="member-card-copy">
-            <h2>${escapeHtml(item.Nama || '-')}</h2>
-            <div class="nta">NTA: ${escapeHtml(item.NTA || '-')}</div>
-            ${access ? `
-              <div class="member-pin-block">
-                <small>PIN CHECK-IN</small>
-                <strong>${escapeHtml(access.pin || '------')}</strong>
-                <span>Rahasiakan PIN ini. Digunakan bersama NTA saat absensi QR.</span>
-              </div>
-            ` : `
-              <div class="member-pin-block is-unavailable">
-                <small>PIN CHECK-IN</small>
-                <strong>------</strong>
-                <span>PIN belum dapat dimuat. Pastikan backend GAS v3.6 sudah dipasang.</span>
-              </div>
-            `}
-          </div>
-
-          ${access && access.qrUrl ? `
-            <div class="member-qr-block">
-              <img src="${escapeHtml(access.qrUrl)}" alt="QR identitas ${escapeHtml(item.Nama || 'anggota')}">
-              <small>QR identitas NTA</small>
-            </div>
-          ` : ''}
-        </div>
+        <h2>${escapeHtml(item.Nama || '-')}</h2>
+        <div class="nta">NTA: ${escapeHtml(item.NTA || '-')}</div>
 
         <div class="card-bottom">
-          <div><small>Krida</small><strong>${escapeHtml(item.Krida || '-')}</strong></div>
-          <div><small>Jabatan</small><strong>${escapeHtml(item.Jabatan || 'Anggota')}</strong></div>
-          <div><small>Status</small><strong>${escapeHtml(item.Status || '-')}</strong></div>
+          <div>
+            <small>Krida</small>
+            <strong>${escapeHtml(item.Krida || '-')}</strong>
+          </div>
+
+          <div>
+            <small>Jabatan</small>
+            <strong>${escapeHtml(item.Jabatan || 'Anggota')}</strong>
+          </div>
+
+          <div>
+            <small>Status</small>
+            <strong>${escapeHtml(item.Status || '-')}</strong>
+          </div>
         </div>
-      </div>
-      <div class="member-security-note">
-        <span class="material-symbols-rounded">verified_user</span>
-        <div><strong>Absensi v3.6</strong><span>QR/NTA mengidentifikasi anggota, sedangkan PIN memverifikasi bahwa check-in dilakukan oleh pemilik identitas.</span></div>
+
       </div>
     `
   );
@@ -4938,29 +5083,11 @@ async function openRolePermissionSettings() {
   } catch (error) { showToast(error.message || 'Gagal memuat hak akses.', 'error'); }
 }
 
-async function openSystemAuditLog() {
-  try {
-    const payload = await serverCall('getSystemAuditLog', state.token, 150);
-    const rows = Array.isArray(payload.rows) ? payload.rows : [];
-    const html = rows.length ? rows.map((item, index) => `
-      <tr>
-        <td>${index + 1}</td>
-        <td>${escapeHtml(formatDateTime(item.Tanggal))}</td>
-        <td><strong>${escapeHtml(item.User || '-')}</strong></td>
-        <td>${escapeHtml(item.Aktivitas || '-')}</td>
-      </tr>
-    `).join('') : emptyTableRow(4, 'Belum ada aktivitas sistem yang tercatat.');
-
-    openCustomModal(
-      'Audit Log Sistem',
-      '150 aktivitas terbaru. Data ini hanya dapat dilihat Administrator.',
-      `<div class="audit-log-summary"><span class="material-symbols-rounded">shield</span><div><strong>${rows.length} aktivitas terbaru</strong><span>Login, perubahan penting, check-in publik, dan operasi sistem yang dicatat backend.</span></div></div>
-       <div class="table-wrap audit-log-table"><table class="data-table"><thead><tr><th>No</th><th>Waktu</th><th>User</th><th>Aktivitas</th></tr></thead><tbody>${html}</tbody></table></div>`,
-      true
-    );
-  } catch (error) {
-    showToast(error.message || 'Gagal memuat audit log.', 'error');
-  }
+function resolveUserMemberLabel(anggotaId) {
+  const id = String(anggotaId || '').trim();
+  if (!id) return '-';
+  const member = (state.data.anggota || []).find(item => String(item.ID || '') === id);
+  return member ? `${member.Nama || '-'}${member.NTA ? ' • ' + member.NTA : ''}` : 'Data anggota tidak ditemukan';
 }
 
 function renderUsers() {
@@ -4971,7 +5098,7 @@ function renderUsers() {
 
   const data = filterData(
     state.data.users,
-    ['Username','Nama','Role','Status']
+    ['Username','Nama','Role','Status','AnggotaID']
   );
 
   const rows = data.length
@@ -4985,6 +5112,7 @@ function renderUsers() {
 
         <td>${escapeHtml(item.Username)}</td>
         <td><span class="badge gold">${escapeHtml(item.Role)}</span></td>
+        <td>${escapeHtml(resolveUserMemberLabel(item.AnggotaID))}</td>
         <td>${statusBadge(item.Status)}</td>
 
         <td>
@@ -5006,15 +5134,15 @@ function renderUsers() {
         </td>
       </tr>
     `).join('')
-    : emptyTableRow(5, 'Belum ada pengguna.');
+    : emptyTableRow(6, 'Belum ada pengguna.');
 
   renderManagementPage({
     title: 'Manajemen Pengguna',
-    description: 'Kelola akun administrator dan pengurus.',
+    description: 'Kelola akun administrator, pengurus, dan portal anggota.',
     type: 'users',
     addLabel: 'Tambah Pengguna',
     canAdd: true,
-    toolbarExtra: '<button class="btn btn-light" type="button" onclick="openSystemAuditLog()"><span class="material-symbols-rounded">history</span> Audit Log</button><button class="btn btn-light" type="button" onclick="openRolePermissionSettings()"><span class="material-symbols-rounded">admin_panel_settings</span> Atur Hak Akses Pengurus</button>',
+    toolbarExtra: '<button class="btn btn-light" type="button" onclick="openRolePermissionSettings()"><span class="material-symbols-rounded">admin_panel_settings</span> Atur Hak Akses Pengurus</button>',
     table: `
       <table class="data-table">
         <thead>
@@ -5022,6 +5150,7 @@ function renderUsers() {
             <th>Nama</th>
             <th>Username</th>
             <th>Role</th>
+            <th>Anggota Tertaut</th>
             <th>Status</th>
             <th>Aksi</th>
           </tr>
@@ -5817,17 +5946,27 @@ function getFormDefinition(type, item = {}) {
 
   if (type === 'users') {
     return {
-      title: 'Tambah Pengguna',
-      subtitle: 'Buat akun administrator atau pengurus.',
+      title: item && item.ID ? 'Edit Pengguna' : 'Tambah Pengguna',
+      subtitle: 'Buat akun administrator, pengurus, atau portal anggota. Untuk role ANGGOTA, tautkan akun ke satu data anggota.',
       fields: [
-        field('Nama','Nama Pengguna','text',true),
+        {...field('Nama','Nama Pengguna'), help:'Untuk role ANGGOTA, nama otomatis mengikuti data anggota yang ditautkan.'},
         field('Username','Username','text',true),
 
         selectField(
           'Role',
           'Role',
-          ['ADMIN','PENGURUS'],
+          ['ADMIN','PENGURUS','ANGGOTA'],
           true
+        ),
+
+        customSelectField(
+          'AnggotaID',
+          'Tautkan Anggota (wajib untuk ANGGOTA)',
+          (state.data.anggota || []).map(member => ({
+            value: member.ID,
+            label: `${member.Nama} — ${member.NTA || 'NTA belum tersedia'}`
+          })),
+          false
         ),
 
         selectField(
@@ -6386,8 +6525,8 @@ async function renderPublicCheckin(code) {
           </h1>
 
           <p>
-            Scan QR kegiatan, masukkan NTA dan PIN anggota, kemudian
-            sistem akan memverifikasi identitas sebelum mencatat kehadiran.
+            Scan QR, masukkan NTA, kemudian sistem akan mencatat
+            kehadiran secara otomatis.
           </p>
         </div>
       </section>
@@ -6411,10 +6550,6 @@ async function renderPublicCheckin(code) {
       'getPublicCheckinData',
       code
     );
-
-    if (kegiatan.requiresPin !== true) {
-      throw new Error('Backend absensi belum menggunakan keamanan v3.6. Perbarui Google Apps Script terlebih dahulu sebelum membuka QR absensi.');
-    }
 
     document.getElementById('publicCheckinContent').innerHTML = `
       <div class="mobile-logo visual-brand">
@@ -6446,25 +6581,8 @@ async function renderPublicCheckin(code) {
             name="nta"
             required
             autocomplete="off"
-            autocapitalize="characters"
             placeholder="Masukkan NTA Anda"
           >
-        </div>
-
-        <div class="auth-field">
-          <label>PIN CHECK-IN</label>
-          <input
-            class="auth-input checkin-pin-input"
-            name="pin"
-            type="password"
-            inputmode="numeric"
-            pattern="[0-9]{6}"
-            maxlength="6"
-            required
-            autocomplete="one-time-code"
-            placeholder="6 digit PIN anggota"
-          >
-          <small class="auth-field-help">PIN tersedia pada Kartu Anggota Digital yang dibuka oleh pengurus.</small>
         </div>
 
         <button
@@ -6478,8 +6596,8 @@ async function renderPublicCheckin(code) {
       </form>
 
       <div class="login-note">
-        Kehadiran hanya dapat dicatat satu kali. NTA saja tidak lagi cukup:
-        sistem juga memverifikasi PIN anggota.
+        Kehadiran hanya dapat dicatat satu kali untuk setiap anggota
+        pada kegiatan yang sama.
       </div>
     `;
 
@@ -6493,9 +6611,7 @@ async function submitPublicCheckin(event, code) {
   event.preventDefault();
 
   const form = event.target;
-  const formData = new FormData(form);
-  const nta = formData.get('nta');
-  const pin = formData.get('pin');
+  const nta = new FormData(form).get('nta');
   const button = document.getElementById('publicCheckinButton');
 
   button.disabled = true;
@@ -6505,8 +6621,7 @@ async function submitPublicCheckin(event, code) {
     const result = await serverCall(
       'publicCheckin',
       code,
-      nta,
-      pin
+      nta
     );
 
     document.getElementById('publicCheckinContent').innerHTML = `
@@ -6637,6 +6752,9 @@ function canPermission(module, action) {
 
 function canViewModule(module) {
   if (module === 'dashboard') return true;
+  if (isRole('ANGGOTA')) {
+    return ['member-profile','member-attendance','member-skk'].includes(module);
+  }
   if (module === 'users') return isRole('ADMIN');
   return canPermission(module, 'view');
 }
@@ -6688,16 +6806,6 @@ function formatDate(value) {
   return `${parts[2]}/${parts[1]}/${parts[0]}`;
 }
 
-function formatDateTime(value) {
-  if (!value) return '-';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
-  return new Intl.DateTimeFormat('id-ID', {
-    dateStyle: 'short',
-    timeStyle: 'short'
-  }).format(date);
-}
-
 function statusBadge(status) {
   const value = String(status || '-');
   const lower = value.toLowerCase();
@@ -6705,17 +6813,17 @@ function statusBadge(status) {
   let color = 'gray';
 
   if (
-    ['aktif','selesai','diarsipkan'].includes(lower)
+    ['aktif','selesai','diarsipkan','hadir'].includes(lower)
   ) {
     color = 'green';
 
   } else if (
-    ['rencana','berjalan','diproses'].includes(lower)
+    ['rencana','berjalan','diproses','izin'].includes(lower)
   ) {
     color = 'blue';
 
   } else if (
-    ['nonaktif','dibatalkan'].includes(lower)
+    ['nonaktif','dibatalkan','alpa'].includes(lower)
   ) {
     color = 'red';
 
@@ -6725,7 +6833,7 @@ function statusBadge(status) {
     color = 'purple';
 
   } else if (
-    ['alumni','draft'].includes(lower)
+    ['alumni','draft','sakit'].includes(lower)
   ) {
     color = 'gold';
   }

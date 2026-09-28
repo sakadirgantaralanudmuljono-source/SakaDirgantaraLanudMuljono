@@ -94,3 +94,25 @@ Frontend melakukan fail-fast jika body RPC lebih dari sekitar 4 MB agar error fi
 **Backend Apps Script mengembalikan respons non-JSON** -> biasanya URL deployment salah, deployment belum menjadi Web App, atau akses deployment meminta login Google.
 
 **QR masih ke script.google.com** -> tambahkan Script Property `SAKA_PUBLIC_APP_URL` dengan URL production Vercel.
+
+
+## Upgrade v3.6.0 — Portal Anggota
+
+Versi 3.6.0 menambahkan role **ANGGOTA** dan portal pribadi (Beranda, Profil Saya, Kehadiran Saya, dan Progres SKK).
+
+### Langkah upgrade dari versi sebelumnya
+
+1. Ganti source Apps Script dengan `GAS_BACKEND/Kode_Vercel_API.gs` versi terbaru lalu deploy ulang Web App Apps Script bila diperlukan.
+2. Login sebagai **ADMIN** pada aplikasi.
+3. Buka **System Maintenance → Cek Struktur** lalu jalankan **Update Struktur**. Langkah ini menambahkan kolom `AnggotaID` pada sheet `Users` tanpa menghapus akun lama.
+4. Deploy ulang project Vercel dengan file frontend versi terbaru.
+5. Buka **Pengguna → Tambah Pengguna**, pilih role `ANGGOTA`, lalu pilih **Tautkan Anggota** dan isi username/password.
+6. Login menggunakan akun anggota tersebut. Akun ANGGOTA hanya dapat melihat data pribadinya sendiri.
+
+### Catatan keamanan Portal Anggota
+
+- Satu akun `ANGGOTA` wajib terhubung ke satu `AnggotaID` yang valid.
+- Satu data anggota hanya dapat mempunyai satu akun portal anggota.
+- Endpoint modul organisasi tetap menolak role ANGGOTA; portal mengambil dataset pribadi yang sudah difilter di backend.
+- Anggota yang masih tertaut ke akun portal tidak dapat dihapus dari database. Nonaktifkan anggota atau hapus/ubah akun portal terlebih dahulu.
+- Checklist SKK pada portal bersifat **read-only**. Verifikasi checklist tetap dilakukan ADMIN/PENGURUS dari modul Penilaian.
