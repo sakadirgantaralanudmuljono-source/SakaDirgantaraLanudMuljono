@@ -1,0 +1,16 @@
+SAKA Dirgantara v3.6.1 - Backend Gateway Diagnostic Fix
+
+PASS - Syntax api/rpc.js
+PASS - Syntax api/health.js
+PASS - Syntax app.js
+PASS - Syntax sw.js
+PASS - Syntax Apps Script source (checked as JavaScript)
+PASS - RPC whitelist matches Apps Script handler map (63 methods)
+PASS - Rejects GAS_API_URL /dev with GAS_URL_TEST_DEPLOYMENT
+PASS - Detects Google login HTML as GAS_LOGIN_REQUIRED
+PASS - Normal JSON Apps Script response passes through gateway
+PASS - /api/health accepts Apps Script v3.6.1 health JSON
+PASS - Frontend shows diagnosticCode in API errors
+PASS - UI/App backend version bumped to 3.6.1 and PWA cache bumped
+
+Note: A live Google Apps Script/Vercel deployment cannot be executed from the local test environment. Use /api/health after deployment to verify the production configuration.

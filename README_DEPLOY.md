@@ -104,7 +104,7 @@ Versi 3.6.0 menambahkan role **ANGGOTA** dan portal pribadi (Beranda, Profil Say
 
 1. Ganti source Apps Script dengan `GAS_BACKEND/Kode_Vercel_API.gs` versi terbaru lalu deploy ulang Web App Apps Script bila diperlukan.
 2. Login sebagai **ADMIN** pada aplikasi.
-3. Buka **System Maintenance → Cek Struktur** lalu jalankan **Update Struktur**. Langkah ini menambahkan kolom `AnggotaID` pada sheet `Users` tanpa menghapus akun lama.
+3. Buka **Pengaturan → Pemeliharaan Database → Cek Struktur** lalu jalankan **Update Struktur**. Langkah ini menambahkan kolom `AnggotaID` pada sheet `Users` tanpa menghapus akun lama.
 4. Deploy ulang project Vercel dengan file frontend versi terbaru.
 5. Buka **Pengguna → Tambah Pengguna**, pilih role `ANGGOTA`, lalu pilih **Tautkan Anggota** dan isi username/password.
 6. Login menggunakan akun anggota tersebut. Akun ANGGOTA hanya dapat melihat data pribadinya sendiri.
@@ -116,3 +116,66 @@ Versi 3.6.0 menambahkan role **ANGGOTA** dan portal pribadi (Beranda, Profil Say
 - Endpoint modul organisasi tetap menolak role ANGGOTA; portal mengambil dataset pribadi yang sudah difilter di backend.
 - Anggota yang masih tertaut ke akun portal tidak dapat dihapus dari database. Nonaktifkan anggota atau hapus/ubah akun portal terlebih dahulu.
 - Checklist SKK pada portal bersifat **read-only**. Verifikasi checklist tetap dilakukan ADMIN/PENGURUS dari modul Penilaian.
+
+## Diagnostik backend (v3.7.0)
+
+Jika aplikasi menampilkan error backend/non-JSON, lakukan pemeriksaan berikut secara berurutan:
+
+1. Di Apps Script, simpan source `GAS_BACKEND/Kode_Vercel_API.gs` terbaru.
+2. Jalankan `setupVercelGateway_()` satu kali bila secret belum pernah dibuat. Salin `GAS_API_SECRET` dari Execution log.
+3. **Penting:** buka **Deploy → Manage deployments → Edit (ikon pensil) → Version: New version → Deploy**. Menyimpan source saja tidak memperbarui URL `/exec` yang sedang dipakai production.
+4. Deployment harus berupa **Web app** dengan:
+   - **Execute as:** Me / User deploying.
+   - **Who has access:** **Anyone** yang dapat membuka tanpa login Google (akses anonim). Jangan gunakan Test deployment `/dev`.
+5. Salin **Web app URL** production yang berakhir `/exec` ke `GAS_API_URL` di Vercel.
+6. Pastikan `GAS_API_SECRET` di Vercel sama dengan Script Property `SAKA_VERCEL_GATEWAY_SECRET`.
+7. Setelah mengubah Environment Variables, lakukan **Redeploy** project Vercel.
+8. Buka `https://DOMAIN-VERCEL-ANDA/api/health`.
+
+Hasil normal v3.7.0 mirip:
+
+```json
+{
+  "success": true,
+  "gateway": "ok",
+  "appsScript": {
+    "service": "SAKA DIRGANTARA",
+    "version": "3.7.0",
+    "gatewayConfigured": true
+  }
+}
+```
+
+Kode diagnostik penting:
+
+- `GAS_URL_TEST_DEPLOYMENT`: `GAS_API_URL` memakai `/dev`; ganti dengan `/exec`.
+- `GAS_LOGIN_REQUIRED`: deployment Apps Script meminta login Google; ubah akses Web App menjadi anonim/publik.
+- `GAS_ACCESS_DENIED`: Apps Script/layanan Google menolak akses atau belum diotorisasi.
+- `GAS_DEPLOYMENT_NOT_FOUND`: URL deployment salah, dihapus, atau tidak aktif.
+- `GAS_HEALTH_NOT_JSON`: endpoint health belum ada pada deployment aktif; deploy **New version** dari backend v3.7.0.
+- `GAS_HTML_RESPONSE`: Apps Script mengirim HTML, biasanya karena deployment stale/salah atau akses meminta login.
+
+
+## Upgrade v3.7.0 — UI/UX + Absensi Geofence
+
+Versi 3.7.0 tidak menambah kolom database untuk geofence. Titik pusat absensi disimpan pada Apps Script Properties.
+
+### Setelah deploy
+
+1. Deploy `GAS_BACKEND/Kode_Vercel_API.gs` sebagai **New version** pada deployment Web App Apps Script yang sama.
+2. Deploy frontend v3.7.0 ke Vercel.
+3. Login sebagai **ADMIN** lalu buka **Pengaturan**.
+4. Pada **Area Absensi 2 KM**, isi label lokasi dan tekan **Gunakan Lokasi Saya** atau masukkan latitude/longitude manual.
+5. Tekan **Simpan Titik Absensi**. Radius selalu 2.000 meter.
+6. Pastikan kegiatan yang akan diabsen memiliki tanggal hari ini dan ubah status menjadi **Berjalan**.
+7. Login dengan akun `ANGGOTA`; kegiatan tersebut akan muncul pada Beranda dan menu **Absen**.
+8. Tekan **Absen Sekarang**, izinkan GPS, lalu sistem akan memvalidasi akurasi dan jarak sebelum menyimpan `Hadir`.
+
+### Persyaratan lokasi
+
+- Aplikasi production harus dibuka melalui HTTPS.
+- Browser/perangkat harus mengizinkan geolocation.
+- Akurasi GPS wajib maksimal ±500 meter.
+- Jarak ke titik admin wajib maksimal 2.000 meter.
+- Lokasi yang dikirim harus baru (maksimum 2 menit).
+- Koordinat GPS anggota tidak disimpan di sheet `Absensi`; hanya jarak hasil validasi yang dicatat pada `Catatan`.

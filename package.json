@@ -1,6 +1,6 @@
 {
   "name": "saka-dirgantara-vercel",
-  "version": "3.6.0-vercel.1",
+  "version": "3.7.0-vercel.1",
   "private": true,
   "type": "module",
   "scripts": {

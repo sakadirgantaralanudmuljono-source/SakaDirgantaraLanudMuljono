@@ -12,7 +12,7 @@ Portal Anggota adalah mode aplikasi khusus role `ANGGOTA`. Satu akun anggota dit
 ## Membuat akun anggota
 
 1. Login sebagai ADMIN.
-2. Pastikan **System Maintenance → Update Struktur** sudah dijalankan setelah upgrade v3.6.0.
+2. Pastikan **Pengaturan → Pemeliharaan Database → Update Struktur** sudah dijalankan setelah upgrade v3.6.0.
 3. Buka **Pengguna → Tambah Pengguna**.
 4. Isi username dan password (minimal 8 karakter).
 5. Pilih role **ANGGOTA**.
@@ -26,3 +26,8 @@ Nama akun role ANGGOTA otomatis mengikuti nama pada master `Anggota` saat akun d
 Role ANGGOTA tidak menerima permission modul organisasi. `getDashboardData()` mendeteksi role ANGGOTA dan membangun payload pribadi di backend berdasarkan `session.AnggotaID`. Dengan demikian browser anggota tidak menerima tabel Anggota, Absensi seluruh organisasi, Kas, Inventaris, Surat, Users, atau data administratif lainnya.
 
 Akun ANGGOTA juga ditolak oleh `getModulesData()` karena fungsi permission organisasi hanya mengizinkan ADMIN/PENGURUS. Data SKK pada portal hanya dibaca; perubahan checklist tetap melalui modul Penilaian milik ADMIN/PENGURUS.
+
+
+## Absensi mandiri GPS
+
+Mulai v3.7.0, anggota dapat check-in langsung dari akun login. Kegiatan hanya muncul untuk check-in saat berstatus `Berjalan` dan tanggalnya hari ini. Titik pusat ditentukan ADMIN di **Pengaturan → Area Absensi 2 KM**. Browser wajib memberikan lokasi dengan akurasi memadai; backend menolak check-in jika jarak lebih dari 2 km.

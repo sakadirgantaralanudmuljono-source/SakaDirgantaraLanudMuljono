@@ -20,7 +20,7 @@ const browserStorage = (() => {
   };
 })();
 
-const UI_VERSION = '3.6.0';
+const UI_VERSION = '3.7.0';
 let systemLoadingTimer = null;
 let dataLoadGeneration = 0;
 let moduleLoadRequests = {};
@@ -151,7 +151,7 @@ function isSafariBrowser() {
 }
 
 function updatePwaInstallButton() {
-  const button = document.getElementById('pwaInstallButton');
+  const button = document.getElementById('pwaInstallSettingButton');
   if (!button) return;
   const iosManualInstall = isIosDevice() && isSafariBrowser() && !isPwaStandalone();
   button.hidden = isPwaStandalone() || (!deferredPwaInstallPrompt && !iosManualInstall);
@@ -282,6 +282,8 @@ function activityLabel(method) {
     checkSystemStructure: 'Memeriksa struktur sistem',
     updateSpreadsheetStructure: 'Memperbarui struktur sistem', safeResetSystem: 'Mereset sistem',
     getPublicCheckinData: 'Memuat formulir absensi', publicCheckin: 'Mengirim absensi',
+    getAttendanceGeofenceSettings: 'Memuat lokasi absensi', saveAttendanceGeofenceSettings: 'Menyimpan titik absensi',
+    memberAttendanceCheckin: 'Memverifikasi lokasi & absensi',
     getPublicIzinData: 'Memuat formulir izin', publicSubmitIzin: 'Mengirim pengajuan izin',
     transitionKegiatanStatus: 'Mengubah status kegiatan',
     importExcelDatabaseBatch: 'Memproses batch impor Excel',
@@ -429,7 +431,8 @@ function serverCall(method, ...args) {
     }
 
     if (!response.ok || envelope.success !== true) {
-      throw new Error(envelope.message || `Permintaan gagal (${response.status}).`);
+      const diagnostic = envelope.diagnosticCode ? ` [${envelope.diagnosticCode}]` : '';
+      throw new Error((envelope.message || `Permintaan gagal (${response.status}).`) + diagnostic);
     }
 
     return envelope.data;
@@ -732,30 +735,20 @@ function renderAppShell() {
           </div>
 
           ${!isMember ? `<div class="nav-section">
-            <div class="nav-label">Administrasi</div>
+            <div class="nav-label">Operasional</div>
             <nav class="nav">
               ${canViewModule('kas') ? navButton('kas', 'account_balance_wallet', 'Kas Organisasi') : ''}
               ${canViewModule('inventaris') ? navButton('inventaris', 'inventory_2', 'Inventaris') : ''}
               ${canViewModule('surat') ? navButton('surat', 'mail', 'Surat') : ''}
               ${canViewModule('pengurus') ? navButton('pengurus', 'account_tree', 'Struktur Pengurus') : ''}
               ${isAdmin ? navButton('users', 'admin_panel_settings', 'Pengguna') : ''}
-              ${isAdmin ? navButton('maintenance', 'settings', 'System Maintenance') : ''}
             </nav>
           </div>` : ''}
 
           <div class="nav-section">
-            <div class="nav-label">Tampilan</div>
+            <div class="nav-label">Aplikasi</div>
             <nav class="nav">
-              <button
-                class="nav-item display-mode-nav"
-                type="button"
-                title="Pilih mode tampilan"
-                onclick="openDisplayModeModal()"
-              >
-                <span class="nav-icon material-symbols-rounded">devices</span>
-                <span class="nav-text">Mode Tampilan</span>
-                <span class="display-mode-mini" id="displayModeMini">${escapeHtml(displayModeShortLabel())}</span>
-              </button>
+              ${navButton('settings', 'settings', 'Pengaturan')}
             </nav>
           </div>
         </div>
@@ -824,13 +817,13 @@ function renderAppShell() {
 
       <nav class="mobile-bottom-nav" aria-label="Navigasi mobile">
         ${mobileNavButton('dashboard', 'space_dashboard', 'Beranda')}
-        ${isMember ? mobileNavButton('member-profile', 'person', 'Profil') : mobileNavButton('anggota', 'groups', 'Anggota')}
-        ${isMember ? mobileNavButton('member-attendance', 'fact_check', 'Kehadiran') : mobileNavButton('kegiatan', 'calendar_month', 'Kegiatan')}
+        ${isMember ? mobileNavButton('member-attendance', 'location_on', 'Absen') : mobileNavButton('anggota', 'groups', 'Anggota')}
+        ${isMember ? mobileNavButton('member-profile', 'person', 'Profil') : mobileNavButton('kegiatan', 'calendar_month', 'Kegiatan')}
         ${isMember ? mobileNavButton('member-skk', 'workspace_premium', 'SKK') : mobileNavButton('absensi', 'fact_check', 'Absensi')}
-        ${!isMember ? `<button class="mobile-nav-item mobile-more-item" type="button" data-mobile-more="true" onclick="toggleSidebar()">
+        ${isMember ? mobileNavButton('settings', 'settings', 'Setelan') : `<button class="mobile-nav-item mobile-more-item" type="button" data-mobile-more="true" onclick="toggleSidebar()">
           <span class="material-symbols-rounded">apps</span>
           <span>Lainnya</span>
-        </button>` : ''}
+        </button>`}
       </nav>
 
     </div>
@@ -1169,8 +1162,8 @@ async function refreshData() {
 
   // Maintenance sudah memiliki Cek Struktur / Update Struktur sendiri.
   // Tombol refresh global cukup menggambar ulang halaman tanpa request Dashboard.
-  if (view === 'maintenance') {
-    renderMaintenance();
+  if (view === 'maintenance' || view === 'settings') {
+    renderSettings();
     return;
   }
 
@@ -1294,7 +1287,8 @@ function switchView(view, element) {
     surat: 'Administrasi Surat',
     pengurus: 'Struktur Pengurus',
     users: 'Manajemen Pengguna',
-    maintenance: 'System Maintenance',
+    maintenance: 'Pengaturan',
+    settings: 'Pengaturan',
     'member-profile': 'Profil Saya',
     'member-attendance': 'Kehadiran Saya',
     'member-skk': 'Progres SKK'
@@ -1399,8 +1393,12 @@ async function renderView() {
     case 'users':
       renderUsers();
       break;
+    case 'settings':
+      renderSettings();
+      break;
     case 'maintenance':
-      renderMaintenance();
+      state.view = 'settings';
+      renderSettings();
       break;
     default:
       renderDashboard();
@@ -1414,93 +1412,193 @@ async function renderView() {
 
 
 function renderMaintenance() {
-  if (!isRole('ADMIN')) {
-    switchViewByName('dashboard');
-    return;
-  }
+  renderSettings();
+}
 
+function pwaInstallStatusText() {
+  if (isPwaStandalone()) return 'Aplikasi sudah terpasang di perangkat ini.';
+  if (deferredPwaInstallPrompt) return 'Perangkat mendukung instalasi langsung.';
+  if (isIosDevice() && isSafariBrowser()) return 'Instal melalui menu Share Safari → Add to Home Screen.';
+  return 'Opsi instalasi akan muncul saat browser mendukung PWA.';
+}
+
+function renderSettings() {
+  const admin = isRole('ADMIN');
+  const modeLabel = displayModeShortLabel();
   document.getElementById('content').innerHTML = `
-    <div class="page-heading">
+    <div class="page-heading settings-heading">
       <div>
-        <h2>System Maintenance</h2>
-        <p>Periksa struktur terlebih dahulu. Update akan menampilkan dan meminta konfirmasi sebelum menghapus sheet atau kolom ekstra. Update Struktur juga memastikan trigger otomasi absensi/izin setiap 5 menit aktif.</p>
+        <span class="dashboard-eyebrow">APLIKASI & SISTEM</span>
+        <h2>Pengaturan</h2>
+        <p>Atur pengalaman aplikasi${admin ? ', lokasi absensi anggota, dan pemeliharaan sistem' : ''} dari satu tempat.</p>
       </div>
     </div>
 
-    <div class="panel">
+    <div class="settings-grid">
+      <section class="panel settings-card">
+        <div class="settings-card-icon"><span class="material-symbols-rounded">devices</span></div>
+        <div class="settings-card-copy">
+          <h3>Mode Tampilan</h3>
+          <p>Sesuaikan kepadatan dan layout antarmuka dengan perangkat yang sedang digunakan.</p>
+          <div class="settings-inline-status"><span>Mode aktif</span><strong>${escapeHtml(modeLabel)}</strong></div>
+        </div>
+        <button class="btn btn-light" type="button" onclick="openDisplayModeModal()"><span class="material-symbols-rounded">tune</span> Ubah Tampilan</button>
+      </section>
+
+      <section class="panel settings-card">
+        <div class="settings-card-icon"><span class="material-symbols-rounded">install_mobile</span></div>
+        <div class="settings-card-copy">
+          <h3>Instal Aplikasi (PWA)</h3>
+          <p>${escapeHtml(pwaInstallStatusText())}</p>
+          <div class="settings-inline-status"><span>Status</span><strong>${isPwaStandalone() ? 'Terinstal' : 'Browser'}</strong></div>
+        </div>
+        <button id="pwaInstallSettingButton" class="btn btn-primary" type="button" onclick="installPwa()" hidden><span class="material-symbols-rounded">download</span> Instal Aplikasi</button>
+      </section>
+    </div>
+
+    ${admin ? `
+    <section class="panel settings-section geofence-settings-panel">
+      <div class="panel-header">
+        <div><span class="settings-section-kicker">ABSENSI ANGGOTA</span><h3>Area Absensi 2 KM</h3><p>Tentukan satu titik pusat. Anggota hanya dapat absen dari akun mereka jika GPS berada maksimal 2.000 meter dari titik ini.</p></div>
+        <span class="geofence-radius-badge"><span class="material-symbols-rounded">radar</span> Radius tetap 2 km</span>
+      </div>
+      <div class="panel-body">
+        <div id="geofenceSettingsState" class="geofence-settings-layout">
+          <div class="geofence-loading">${loadingHtml(88)}</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel settings-section">
+      <div class="panel-header"><div><span class="settings-section-kicker">ADMINISTRASI SISTEM</span><h3>Pemeliharaan Database</h3><p>Periksa struktur sebelum update. Update juga memastikan trigger otomasi absensi/izin tetap aktif.</p></div></div>
       <div class="panel-body">
         <div class="maintenance-actions">
-          <button class="btn btn-primary" onclick="checkMaintenance()">
-            <span class="material-symbols-rounded">fact_check</span>
-            Cek Struktur
-          </button>
-          <button class="btn btn-success" onclick="updateMaintenance()">
-            <span class="material-symbols-rounded">upgrade</span>
-            Update Struktur
-          </button>
-          <button class="btn btn-warning" onclick="resetMaintenance()">
-            <span class="material-symbols-rounded">restart_alt</span>
-            Reset Sesi
-          </button>
+          <button class="btn btn-primary" onclick="checkMaintenance()"><span class="material-symbols-rounded">fact_check</span> Cek Struktur</button>
+          <button class="btn btn-success" onclick="updateMaintenance()"><span class="material-symbols-rounded">upgrade</span> Update Struktur</button>
+          <button class="btn btn-warning" onclick="resetMaintenance()"><span class="material-symbols-rounded">restart_alt</span> Reset Sesi</button>
         </div>
         <div id="maintenanceResult" class="maintenance-result"></div>
       </div>
-    </div>
+    </section>
 
-    <div class="panel excel-import-panel">
+    <section class="panel excel-import-panel settings-section">
       <div class="panel-header">
-        <div>
-          <h3>Import Database dari Excel</h3>
-          <p>Unggah file .xlsx/.xls. Format tanggal dan variasi Krida akan dinormalisasi otomatis.</p>
-        </div>
-        <button class="btn btn-light" type="button" onclick="downloadExcelTemplate()">
-          <span class="material-symbols-rounded">download</span>
-          Unduh Template Excel
-        </button>
+        <div><span class="settings-section-kicker">DATA</span><h3>Import Database dari Excel</h3><p>Unggah .xlsx/.xls. Data lama tidak dihapus dan record yang cocok akan diperbarui.</p></div>
+        <button class="btn btn-light" type="button" onclick="downloadExcelTemplate()"><span class="material-symbols-rounded">download</span> Unduh Template</button>
       </div>
-
       <div class="panel-body">
         <div class="excel-import-grid">
-          <div class="excel-import-drop">
+          <label class="excel-import-drop" for="excelDatabaseFile">
             <span class="material-symbols-rounded excel-import-icon">upload_file</span>
-            <div>
-              <strong>Pilih file database Excel</strong>
-              <p>Maksimum 5 MB dan 2.000 baris. Diproses otomatis per batch agar tidak timeout.</p>
-            </div>
-            <input
-              id="excelDatabaseFile"
-              class="excel-file-input"
-              type="file"
-              accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
-            >
-          </div>
-
-          <div class="excel-import-notes">
-            <strong>Mode impor aman</strong>
-            <ul>
-              <li>Data lama tidak dihapus.</li>
-              <li>ID/NTA/kode unik yang sudah ada akan diperbarui.</li>
-              <li>Data baru akan mendapat ID otomatis.</li>
-              <li>Absensi dapat dicocokkan melalui ID, NTA, dan nama.</li>
-            </ul>
-          </div>
+            <div><strong>Pilih file database Excel</strong><p>Maksimum 5 MB dan 2.000 baris. Proses dilakukan per batch agar stabil.</p></div>
+            <input id="excelDatabaseFile" class="excel-file-input" type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
+          </label>
+          <div class="excel-import-notes"><strong>Mode impor aman</strong><ul><li>Data lama tidak dihapus.</li><li>ID/NTA/kode unik diperbarui bila cocok.</li><li>Data baru mendapat ID otomatis.</li><li>Absensi dicocokkan melalui ID, NTA, dan nama.</li></ul></div>
         </div>
-
-        <div class="excel-import-actions">
-          <button
-            id="excelImportButton"
-            class="btn btn-primary"
-            type="button"
-            onclick="importDatabaseExcel()"
-          >
-            <span class="material-symbols-rounded">database_upload</span>
-            Upload & Import Excel
-          </button>
-        </div>
-
+        <div class="excel-import-actions"><button id="excelImportButton" class="btn btn-primary" type="button" onclick="importDatabaseExcel()"><span class="material-symbols-rounded">database_upload</span> Upload & Import</button></div>
         <div id="excelImportResult" class="maintenance-result"></div>
       </div>
-    </div>`;
+    </section>` : ''}
+  `;
+
+  updatePwaInstallButton();
+  if (admin) loadGeofenceSettings();
+}
+
+async function loadGeofenceSettings() {
+  const host = document.getElementById('geofenceSettingsState');
+  if (!host) return;
+  try {
+    const data = await serverCall('getAttendanceGeofenceSettings', state.token);
+    if (!document.getElementById('geofenceSettingsState')) return;
+    renderGeofenceSettingsForm(data || {});
+  } catch (error) {
+    host.innerHTML = `<div class="empty-state compact"><span class="material-symbols-rounded">location_off</span><strong>Pengaturan lokasi belum dapat dimuat</strong><p>${escapeHtml(error.message)}</p></div>`;
+  }
+}
+
+function renderGeofenceSettingsForm(data) {
+  const host = document.getElementById('geofenceSettingsState');
+  if (!host) return;
+  const configured = data.configured === true;
+  const lat = configured ? Number(data.latitude).toFixed(6) : '';
+  const lng = configured ? Number(data.longitude).toFixed(6) : '';
+  host.innerHTML = `
+    <div class="geofence-summary ${configured ? 'is-ready' : 'is-empty'}">
+      <div class="geofence-summary-icon"><span class="material-symbols-rounded">${configured ? 'verified_user' : 'location_off'}</span></div>
+      <div><small>STATUS AREA</small><strong>${configured ? 'Titik absensi aktif' : 'Belum dikonfigurasi'}</strong><p>${configured ? `${escapeHtml(data.label || 'Titik absensi')} • radius 2 km` : 'Anggota belum dapat menggunakan absensi mandiri sampai titik pusat disimpan.'}</p></div>
+      ${configured && data.updatedAt ? `<span class="geofence-updated">Diperbarui ${escapeHtml(data.updatedAt)}</span>` : ''}
+    </div>
+    <div class="geofence-form-grid">
+      <div class="form-group"><label>Nama / label lokasi</label><input id="geofenceLabel" class="form-control" maxlength="100" value="${escapeHtml(data.label || '')}" placeholder="Contoh: Lanud Muljono"></div>
+      <div class="form-group"><label>Radius</label><div class="readonly-setting"><strong>2.000 meter</strong><span>Tetap / wajib</span></div></div>
+      <div class="form-group"><label>Latitude</label><input id="geofenceLat" class="form-control" inputmode="decimal" value="${escapeHtml(lat)}" placeholder="-7.257472"></div>
+      <div class="form-group"><label>Longitude</label><input id="geofenceLng" class="form-control" inputmode="decimal" value="${escapeHtml(lng)}" placeholder="112.752090"></div>
+    </div>
+    <div class="geofence-actions">
+      <button class="btn btn-light" type="button" onclick="fillGeofenceFromCurrentLocation()"><span class="material-symbols-rounded">my_location</span> Gunakan Lokasi Saya</button>
+      <button class="btn btn-primary" type="button" onclick="saveGeofenceSettings()"><span class="material-symbols-rounded">save</span> Simpan Titik Absensi</button>
+      ${configured ? `<a class="btn btn-light" target="_blank" rel="noopener" href="https://www.google.com/maps?q=${encodeURIComponent(lat + ',' + lng)}"><span class="material-symbols-rounded">map</span> Lihat Titik</a>` : ''}
+    </div>
+    <div class="geofence-note"><span class="material-symbols-rounded">info</span><p>Absensi mandiri menggunakan GPS browser dan validasi jarak di backend. Lokasi dengan akurasi lebih buruk dari 500 meter akan ditolak agar pengecekan tidak terlalu kasar.</p></div>`;
+}
+
+function getBrowserLocation(options = {}) {
+  return new Promise((resolve, reject) => {
+    if (!window.isSecureContext) {
+      reject(new Error('Pengecekan lokasi membutuhkan koneksi HTTPS.'));
+      return;
+    }
+    if (!navigator.geolocation) {
+      reject(new Error('Perangkat/browser ini tidak mendukung GPS/geolocation.'));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(position => {
+      resolve({
+        latitude: Number(position.coords.latitude),
+        longitude: Number(position.coords.longitude),
+        accuracy: Number(position.coords.accuracy || 0),
+        capturedAt: Number(position.timestamp || Date.now())
+      });
+    }, error => {
+      const messages = {
+        1: 'Izin lokasi ditolak. Aktifkan Location/GPS untuk aplikasi ini lalu coba lagi.',
+        2: 'Lokasi belum dapat ditentukan. Pastikan GPS aktif dan sinyal lokasi tersedia.',
+        3: 'Pencarian lokasi terlalu lama. Coba lagi di area dengan sinyal GPS lebih baik.'
+      };
+      reject(new Error(messages[error && error.code] || 'Gagal membaca lokasi perangkat.'));
+    }, { enableHighAccuracy: true, timeout: Number(options.timeout || 15000), maximumAge: 0 });
+  });
+}
+
+async function fillGeofenceFromCurrentLocation() {
+  try {
+    const location = await getBrowserLocation();
+    const lat = document.getElementById('geofenceLat');
+    const lng = document.getElementById('geofenceLng');
+    if (lat) lat.value = location.latitude.toFixed(6);
+    if (lng) lng.value = location.longitude.toFixed(6);
+    showToast(`Lokasi terbaca • akurasi ±${Math.round(location.accuracy)} m`, location.accuracy <= 500 ? 'success' : 'warning');
+  } catch (error) {
+    showToast(error.message, 'error');
+  }
+}
+
+async function saveGeofenceSettings() {
+  const label = String(document.getElementById('geofenceLabel')?.value || '').trim();
+  const latitude = Number(String(document.getElementById('geofenceLat')?.value || '').replace(',', '.'));
+  const longitude = Number(String(document.getElementById('geofenceLng')?.value || '').replace(',', '.'));
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    showToast('Latitude dan longitude wajib diisi dengan koordinat yang valid.', 'error');
+    return;
+  }
+  try {
+    const saved = await serverCall('saveAttendanceGeofenceSettings', state.token, { label, latitude, longitude });
+    renderGeofenceSettingsForm(saved || {});
+    showToast('Titik absensi 2 km berhasil disimpan.', 'success');
+  } catch (error) {
+    showToast(error.message, 'error');
+  }
 }
 
 async function checkMaintenance() {
@@ -2134,6 +2232,58 @@ function memberInfoItem(icon, label, value) {
     </div>`;
 }
 
+function memberSelfCheckinCard(portal) {
+  const config = portal.selfCheckin || {};
+  const activities = Array.isArray(config.activities) ? config.activities : [];
+  if (!config.geofenceConfigured) {
+    return `<section class="member-checkin-card is-disabled"><div class="member-checkin-icon"><span class="material-symbols-rounded">location_off</span></div><div class="member-checkin-copy"><span class="dashboard-eyebrow">ABSENSI MANDIRI</span><h3>Lokasi absensi belum tersedia</h3><p>Admin belum menentukan titik pusat absensi. Hubungi pengurus jika kegiatan sedang berlangsung.</p></div></section>`;
+  }
+  if (!activities.length) {
+    return `<section class="member-checkin-card is-idle"><div class="member-checkin-icon"><span class="material-symbols-rounded">event_available</span></div><div class="member-checkin-copy"><span class="dashboard-eyebrow">ABSENSI MANDIRI</span><h3>Belum ada kegiatan untuk check-in</h3><p>Saat kegiatan berstatus <b>Berjalan</b> pada hari ini, tombol absensi akan muncul di sini. Area wajib maksimal ${Math.round(Number(config.radiusMeters || 2000)/1000)} km dari ${escapeHtml(config.label || 'titik admin')}.</p></div></section>`;
+  }
+  return `<section class="member-checkin-card is-ready">
+    <div class="member-checkin-head"><div><span class="dashboard-eyebrow">ABSENSI MANDIRI • GPS WAJIB</span><h3>Check-in kegiatan</h3><p>Lokasi Anda diverifikasi maksimal ${Number(config.radiusMeters || 2000).toLocaleString('id-ID')} m dari ${escapeHtml(config.label || 'titik absensi')}.</p></div><span class="member-checkin-radius"><span class="material-symbols-rounded">radar</span> 2 KM</span></div>
+    <div class="member-checkin-list">${activities.map(item => `
+      <div class="member-checkin-activity">
+        <div><strong>${escapeHtml(item.NamaKegiatan || 'Kegiatan')}</strong><span>${escapeHtml(formatLongDate(item.Tanggal))} • ${escapeHtml(item.Lokasi || 'Lokasi kegiatan')}</span></div>
+        ${item.allowCheckin === false && item.attendanceStatus ? `<div class="member-checkin-done">${statusBadge(item.attendanceStatus)}<small>Sudah tercatat</small></div>` : `<div class="member-checkin-action">${String(item.attendanceStatus || '').toLowerCase()==='alpa' && String(item.attendanceMethod || '').toLowerCase()==='otomatis' ? '<small class="member-auto-alpa-note">Alpa otomatis dapat diganti saat check-in valid</small>' : ''}<button class="btn btn-primary member-checkin-button" type="button" onclick="memberCheckin('${escapeHtml(String(item.ID || ''))}', this)"><span class="material-symbols-rounded">my_location</span> Absen Sekarang</button></div>`}
+      </div>`).join('')}</div>
+    <div id="memberLocationFeedback" class="member-location-feedback" hidden></div>
+    <div class="member-checkin-privacy"><span class="material-symbols-rounded">shield</span><span>GPS dipakai untuk validasi jarak. Sistem hanya mencatat metode check-in dan jarak, bukan menyimpan koordinat GPS Anda di tabel absensi.</span></div>
+  </section>`;
+}
+
+async function memberCheckin(kegiatanId, button) {
+  if (!kegiatanId || !isRole('ANGGOTA')) return;
+  const original = button ? button.innerHTML : '';
+  if (button) { button.disabled = true; button.innerHTML = '<span class="material-symbols-rounded spin">progress_activity</span> Cek GPS...'; }
+  const feedback = document.getElementById('memberLocationFeedback');
+  try {
+    const location = await getBrowserLocation({ timeout: 18000 });
+    if (feedback) {
+      feedback.hidden = false;
+      feedback.className = 'member-location-feedback is-checking';
+      feedback.innerHTML = `<span class="material-symbols-rounded">my_location</span><div><strong>Lokasi ditemukan</strong><span>Akurasi GPS ±${Math.round(location.accuracy)} m. Memverifikasi jarak ke titik admin...</span></div>`;
+    }
+    const result = await serverCall('memberAttendanceCheckin', state.token, kegiatanId, location);
+    if (feedback) {
+      feedback.className = 'member-location-feedback is-success';
+      feedback.innerHTML = `<span class="material-symbols-rounded">verified</span><div><strong>Absensi berhasil</strong><span>Jarak ${Number(result.distanceMeters || 0).toLocaleString('id-ID')} m dari ${escapeHtml(result.geofenceLabel || 'titik absensi')} • akurasi ±${Math.round(location.accuracy)} m.</span></div>`;
+    }
+    showToast(result.alreadyCheckedIn ? 'Kehadiran Anda sudah tercatat.' : 'Absensi berhasil dicatat.', 'success');
+    await refreshData();
+  } catch (error) {
+    if (feedback) {
+      feedback.hidden = false;
+      feedback.className = 'member-location-feedback is-error';
+      feedback.innerHTML = `<span class="material-symbols-rounded">location_off</span><div><strong>Check-in ditolak</strong><span>${escapeHtml(error.message)}</span></div>`;
+    }
+    showToast(error.message, 'error');
+  } finally {
+    if (button && document.body.contains(button)) { button.disabled = false; button.innerHTML = original; }
+  }
+}
+
 function renderMemberDashboard() {
   const portal = getMemberPortalData();
   if (!portal) return memberPortalUnavailable();
@@ -2174,6 +2324,8 @@ function renderMemberDashboard() {
       </div>
       <div class="member-status-card">${statusBadge(member.Status)}</div>
     </div>
+
+    ${memberSelfCheckinCard(portal)}
 
     <div class="stats-grid dashboard-kpi-grid member-kpi-grid">
       ${statCard('percent','green','Kehadiran',`${Number(stats.rate || 0)}%`,`${Number(stats.Hadir || 0)} hadir dari ${Number(stats.total || 0)} pertemuan`,"switchViewByName('member-attendance')")}
@@ -2253,7 +2405,8 @@ function renderMemberAttendance() {
     </tr>`).join('') : emptyTableRow(6,'Belum ada riwayat kehadiran.');
 
   document.getElementById('content').innerHTML = `
-    <div class="page-heading"><div><h2>Kehadiran Saya</h2><p>Riwayat kehadiran pribadi. Data pada halaman ini hanya berasal dari akun anggota Anda.</p></div></div>
+    <div class="page-heading"><div><h2>Kehadiran Saya</h2><p>Check-in kegiatan dan pantau seluruh riwayat kehadiran dari akun Anda.</p></div></div>
+    ${memberSelfCheckinCard(portal)}
     <div class="stats-grid dashboard-kpi-grid member-kpi-grid">
       ${statCard('percent','green','Persentase Hadir',`${Number(stats.rate || 0)}%`,`${Number(stats.total || 0)} pertemuan tercatat`)}
       ${statCard('check_circle','blue','Hadir',Number(stats.Hadir || 0))}
@@ -6751,7 +6904,8 @@ function canPermission(module, action) {
 }
 
 function canViewModule(module) {
-  if (module === 'dashboard') return true;
+  if (module === 'dashboard' || module === 'settings') return true;
+  if (module === 'maintenance') return isRole('ADMIN');
   if (isRole('ANGGOTA')) {
     return ['member-profile','member-attendance','member-skk'].includes(module);
   }
