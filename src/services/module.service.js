@@ -1,16 +1,22 @@
-import { apiRequest } from './api';
+import {apiRequest} from './api';
 
-export const moduleService = {
-  dashboard: () => apiRequest('dashboard.get'),
-  members: () => apiRequest('members.list'),
-  activities: () => apiRequest('activities.list'),
-  attendance: () => apiRequest('attendance.list'),
-  assessments: () => apiRequest('assessments.list'),
-  cash: () => apiRequest('cash.list'),
-  inventory: () => apiRequest('inventory.list'),
-  letters: () => apiRequest('letters.list'),
-  structure: () => apiRequest('structure.list'),
-  users: () => apiRequest('users.list'),
-  maintenance: () => apiRequest('maintenance.get'),
-  profile: () => apiRequest('profile.get')
+async function modules(names){
+  const data=await apiRequest('modules.get',{modules:Array.isArray(names)?names:[names]});
+  return data?.modules||{};
+}
+
+export const moduleService={
+  dashboard:(forceRefresh=false)=>apiRequest('dashboard.get',{forceRefresh}),
+  permissions:()=>apiRequest('permissions.get'),
+  modules,
+  members:async()=> (await modules('anggota')).anggota||[],
+  activities:async()=> (await modules('kegiatan')).kegiatan||[],
+  attendance:async()=> (await modules('absensi')).absensi||[],
+  cash:async()=> (await modules('kas')).kas||[],
+  inventory:async()=> (await modules('inventaris')).inventaris||[],
+  letters:async()=> (await modules('surat')).surat||[],
+  structure:async()=> (await modules('pengurus')).pengurus||[],
+  users:async()=> (await modules('users')).users||[],
+  profile:async()=> (await modules('anggota')).anggota?.[0]||null,
+  systemStructure:()=>apiRequest('system.structure')
 };

@@ -1,5 +1,12 @@
 import PageHeader from '../../components/common/PageHeader';
-import ModuleToolbar from '../../components/common/ModuleToolbar';
 import DataTable from '../../components/common/DataTable';
-const columns=[{'key': 'c0', 'label': 'Anggota'}, {'key': 'c1', 'label': 'Kegiatan'}, {'key': 'c2', 'label': 'Status'}, {'key': 'c3', 'label': 'Waktu'}];
-export default function Page(){return <><PageHeader eyebrow="KEHADIRAN" title="Absensi" description="Pantau kehadiran, izin, keterlambatan, dan hasil validasi lokasi anggota."/><section className="panel"><ModuleToolbar placeholder="Cari absensi..." addLabel="Tambah Absensi"/><DataTable columns={columns} rows={[]} empty="Belum ada data absensi. Data aktual akan dimuat melalui service API."/></section></>}
+import {moduleService} from '../../services/module.service';
+import {useRemoteData} from '../../hooks/useRemoteData';
+const columns=[{key:'AnggotaID',label:'Anggota ID'},{key:'KegiatanID',label:'Kegiatan ID'},{key:'StatusKehadiran',label:'Status'},{key:'Tanggal',label:'Tanggal'}];
+export default function Page(){
+ const {data,loading,error,reload}=useRemoteData(()=>moduleService.attendance(),[]);
+ const rows=(data||[]).map((r,i)=>({...r,id:r.ID||i}));
+ return <><PageHeader eyebrow="KEHADIRAN" title="Absensi" description="Data kehadiran yang tersimpan pada backend."/>
+ <section className="panel"><div className="toolbar"><span>{loading?'Memuat data...':`${rows.length} data`}</span><button className="btn" onClick={reload} disabled={loading}>Muat Ulang</button></div>
+ {error&&<div className="alert">{error}</div>}<DataTable columns={columns} rows={rows} empty="Belum ada data."/></section></>;
+}

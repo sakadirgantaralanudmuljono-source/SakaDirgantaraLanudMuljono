@@ -1,5 +1,12 @@
 import PageHeader from '../../components/common/PageHeader';
-import ModuleToolbar from '../../components/common/ModuleToolbar';
 import DataTable from '../../components/common/DataTable';
-const columns=[{'key': 'c0', 'label': 'Nomor'}, {'key': 'c1', 'label': 'Perihal'}, {'key': 'c2', 'label': 'Jenis'}, {'key': 'c3', 'label': 'Tanggal'}];
-export default function Page(){return <><PageHeader eyebrow="ADMINISTRASI" title="Surat" description="Kelola surat masuk, surat keluar, nomor surat, dan dokumen administrasi."/><section className="panel"><ModuleToolbar placeholder="Cari surat..." addLabel="Tambah Surat"/><DataTable columns={columns} rows={[]} empty="Belum ada data surat. Data aktual akan dimuat melalui service API."/></section></>}
+import {moduleService} from '../../services/module.service';
+import {useRemoteData} from '../../hooks/useRemoteData';
+const columns=[{key:'NomorSurat',label:'Nomor'},{key:'Perihal',label:'Perihal'},{key:'Jenis',label:'Jenis'},{key:'Tanggal',label:'Tanggal'}];
+export default function Page(){
+ const {data,loading,error,reload}=useRemoteData(()=>moduleService.letters(),[]);
+ const rows=(data||[]).map((r,i)=>({...r,id:r.ID||i}));
+ return <><PageHeader eyebrow="ADMINISTRASI" title="Surat" description="Surat masuk dan keluar organisasi."/>
+ <section className="panel"><div className="toolbar"><span>{loading?'Memuat data...':`${rows.length} data`}</span><button className="btn" onClick={reload} disabled={loading}>Muat Ulang</button></div>
+ {error&&<div className="alert">{error}</div>}<DataTable columns={columns} rows={rows} empty="Belum ada data."/></section></>;
+}

@@ -1,5 +1,12 @@
 import PageHeader from '../../components/common/PageHeader';
-import ModuleToolbar from '../../components/common/ModuleToolbar';
 import DataTable from '../../components/common/DataTable';
-const columns=[{'key': 'c0', 'label': 'Username'}, {'key': 'c1', 'label': 'Nama'}, {'key': 'c2', 'label': 'Role'}, {'key': 'c3', 'label': 'Status'}];
-export default function Page(){return <><PageHeader eyebrow="AKSES SISTEM" title="Pengguna" description="Kelola akun login, role, status, dan hak akses pengguna."/><section className="panel"><ModuleToolbar placeholder="Cari pengguna..." addLabel="Tambah Pengguna"/><DataTable columns={columns} rows={[]} empty="Belum ada data pengguna. Data aktual akan dimuat melalui service API."/></section></>}
+import {moduleService} from '../../services/module.service';
+import {useRemoteData} from '../../hooks/useRemoteData';
+const columns=[{key:'Username',label:'Username'},{key:'Nama',label:'Nama'},{key:'Role',label:'Role'},{key:'Status',label:'Status'}];
+export default function Page(){
+ const {data,loading,error,reload}=useRemoteData(()=>moduleService.users(),[]);
+ const rows=(data||[]).map((r,i)=>({...r,id:r.ID||i}));
+ return <><PageHeader eyebrow="AKSES SISTEM" title="Pengguna" description="Akun login dan role pengguna."/>
+ <section className="panel"><div className="toolbar"><span>{loading?'Memuat data...':`${rows.length} data`}</span><button className="btn" onClick={reload} disabled={loading}>Muat Ulang</button></div>
+ {error&&<div className="alert">{error}</div>}<DataTable columns={columns} rows={rows} empty="Belum ada data."/></section></>;
+}

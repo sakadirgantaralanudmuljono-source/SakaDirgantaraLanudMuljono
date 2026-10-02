@@ -1,5 +1,9 @@
 import PageHeader from '../../components/common/PageHeader';
-import ModuleToolbar from '../../components/common/ModuleToolbar';
-import DataTable from '../../components/common/DataTable';
-const columns=[{'key': 'c0', 'label': 'Fitur'}, {'key': 'c1', 'label': 'Keterangan'}, {'key': 'c2', 'label': 'Status'}, {'key': 'c3', 'label': 'Aksi'}];
-export default function Page(){return <><PageHeader eyebrow="SISTEM" title="System Maintenance" description="Konfigurasi, pemeriksaan data, impor/ekspor, dan pemeliharaan aplikasi."/><section className="panel"><ModuleToolbar placeholder="Cari system maintenance..." addLabel="Tambah System Maintenance"/><DataTable columns={columns} rows={[]} empty="Belum ada data system maintenance. Data aktual akan dimuat melalui service API."/></section></>}
+import {moduleService} from '../../services/module.service';
+import {useRemoteData} from '../../hooks/useRemoteData';
+export default function MaintenancePage(){
+ const {data,loading,error,reload}=useRemoteData(()=>moduleService.systemStructure(),[]);
+ return <><PageHeader eyebrow="SISTEM" title="System Maintenance" description="Pemeriksaan struktur backend Google Apps Script dan database."/>
+ <section className="panel"><div className="toolbar"><span>{loading?'Memeriksa backend...':'Pemeriksaan selesai'}</span><button className="btn" onClick={reload}>Periksa Ulang</button></div>
+ {error&&<div className="alert">{error}</div>}<pre className="system-result">{data?JSON.stringify(data,null,2):''}</pre></section></>;
+}

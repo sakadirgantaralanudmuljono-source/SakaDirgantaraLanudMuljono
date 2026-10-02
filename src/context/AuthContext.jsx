@@ -30,7 +30,7 @@ export function AuthProvider({children}){
 
       try{
         const data=await authService.me();
-        if(active)setSession(data);
+        if(active)setSession({token:localStorage.getItem('saka_session_token'),user:data.user});
       }catch{
         localStorage.removeItem('saka_session_token');
         localStorage.removeItem('saka_session');
