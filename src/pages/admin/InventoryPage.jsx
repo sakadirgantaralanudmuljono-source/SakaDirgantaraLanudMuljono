@@ -1,12 +1,3 @@
-import PageHeader from '../../components/common/PageHeader';
-import DataTable from '../../components/common/DataTable';
-import {moduleService} from '../../services/module.service';
-import {useRemoteData} from '../../hooks/useRemoteData';
-const columns=[{key:'NamaBarang',label:'Barang'},{key:'Jumlah',label:'Jumlah'},{key:'Kondisi',label:'Kondisi'},{key:'Lokasi',label:'Lokasi'}];
-export default function Page(){
- const {data,loading,error,reload}=useRemoteData(()=>moduleService.inventory(),[]);
- const rows=(data||[]).map((r,i)=>({...r,id:r.ID||i}));
- return <><PageHeader eyebrow="ASET" title="Inventaris" description="Data barang dan kondisi inventaris."/>
- <section className="panel"><div className="toolbar"><span>{loading?'Memuat data...':`${rows.length} data`}</span><button className="btn" onClick={reload} disabled={loading}>Muat Ulang</button></div>
- {error&&<div className="alert">{error}</div>}<DataTable columns={columns} rows={rows} empty="Belum ada data."/></section></>;
-}
+import CrudPage from '../../components/common/CrudPage';import {moduleService} from '../../services/module.service';
+const columns=[{key:"KodeBarang",label:"Kode"},{key:"NamaBarang",label:"Barang"},{key:"Jumlah",label:"Jumlah"},{key:"Kondisi",label:"Kondisi"}];const fields=[{"key": "NamaBarang", "label": "Nama Barang", "required": true}, {"key": "Kategori", "label": "Kategori"}, {"key": "KodeBarang", "label": "Kode Barang"}, {"key": "Jumlah", "label": "Jumlah", "type": "number", "min": "0", "required": true}, {"key": "JumlahRusak", "label": "Jumlah Rusak", "type": "number", "min": "0"}, {"key": "Kondisi", "label": "Kondisi", "type": "select", "options": ["Baik", "Rusak Ringan", "Rusak Berat", "Hilang"]}, {"key": "Lokasi", "label": "Lokasi"}];
+export default function Page(){return <CrudPage eyebrow="ASET" title="Inventaris" description="Kelola barang dan kondisi inventaris." module="inventaris" loader={()=>moduleService.inventory()} columns={columns} fields={fields}/>}

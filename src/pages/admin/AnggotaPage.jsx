@@ -1,12 +1,3 @@
-import PageHeader from '../../components/common/PageHeader';
-import DataTable from '../../components/common/DataTable';
-import {moduleService} from '../../services/module.service';
-import {useRemoteData} from '../../hooks/useRemoteData';
-const columns=[{key:'Nama',label:'Nama Anggota'},{key:'NTA',label:'NTA'},{key:'Status',label:'Status'},{key:'Krida',label:'Krida'}];
-export default function Page(){
- const {data,loading,error,reload}=useRemoteData(()=>moduleService.members(),[]);
- const rows=(data||[]).map((r,i)=>({...r,id:r.ID||i}));
- return <><PageHeader eyebrow="DATA ANGGOTA" title="Anggota" description="Kelola identitas dan status keanggotaan."/>
- <section className="panel"><div className="toolbar"><span>{loading?'Memuat data...':`${rows.length} data`}</span><button className="btn" onClick={reload} disabled={loading}>Muat Ulang</button></div>
- {error&&<div className="alert">{error}</div>}<DataTable columns={columns} rows={rows} empty="Belum ada data."/></section></>;
-}
+import CrudPage from '../../components/common/CrudPage';import {moduleService} from '../../services/module.service';
+const columns=[{key:"Nama",label:"Nama"},{key:"NTA",label:"NTA"},{key:"Status",label:"Status"},{key:"Krida",label:"Krida"}];const fields=[{"key": "Nama", "label": "Nama", "required": true}, {"key": "JenisKelamin", "label": "Jenis Kelamin", "type": "select", "options": ["Laki-laki", "Perempuan"]}, {"key": "TempatLahir", "label": "Tempat Lahir"}, {"key": "TanggalLahir", "label": "Tanggal Lahir", "type": "date"}, {"key": "NoHP", "label": "No. HP"}, {"key": "Krida", "label": "Krida"}, {"key": "Status", "label": "Status", "type": "select", "options": ["Calon Anggota", "Aktif", "Nonaktif", "Alumni"], "required": true}, {"key": "Alamat", "label": "Alamat", "type": "textarea", "full": true}];
+export default function Page(){return <CrudPage eyebrow="DATA ANGGOTA" title="Anggota" description="Tambah, edit, dan hapus data anggota." module="anggota" loader={()=>moduleService.members()} columns={columns} fields={fields}/>}

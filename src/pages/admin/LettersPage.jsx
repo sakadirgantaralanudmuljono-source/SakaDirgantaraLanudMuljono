@@ -1,12 +1,3 @@
-import PageHeader from '../../components/common/PageHeader';
-import DataTable from '../../components/common/DataTable';
-import {moduleService} from '../../services/module.service';
-import {useRemoteData} from '../../hooks/useRemoteData';
-const columns=[{key:'NomorSurat',label:'Nomor'},{key:'Perihal',label:'Perihal'},{key:'Jenis',label:'Jenis'},{key:'Tanggal',label:'Tanggal'}];
-export default function Page(){
- const {data,loading,error,reload}=useRemoteData(()=>moduleService.letters(),[]);
- const rows=(data||[]).map((r,i)=>({...r,id:r.ID||i}));
- return <><PageHeader eyebrow="ADMINISTRASI" title="Surat" description="Surat masuk dan keluar organisasi."/>
- <section className="panel"><div className="toolbar"><span>{loading?'Memuat data...':`${rows.length} data`}</span><button className="btn" onClick={reload} disabled={loading}>Muat Ulang</button></div>
- {error&&<div className="alert">{error}</div>}<DataTable columns={columns} rows={rows} empty="Belum ada data."/></section></>;
-}
+import CrudPage from '../../components/common/CrudPage';import {moduleService} from '../../services/module.service';
+const columns=[{key:"NomorSurat",label:"Nomor"},{key:"Perihal",label:"Perihal"},{key:"Jenis",label:"Jenis"},{key:"Tanggal",label:"Tanggal"}];const fields=[{"key": "Tanggal", "label": "Tanggal", "type": "date", "required": true}, {"key": "Jenis", "label": "Jenis", "type": "select", "options": ["Surat Masuk", "Surat Keluar"], "required": true}, {"key": "Perihal", "label": "Perihal", "required": true}, {"key": "NomorSurat", "label": "Nomor Surat"}, {"key": "Status", "label": "Status", "type": "select", "options": ["Draft", "Diproses", "Selesai", "Diarsipkan"]}, {"key": "LinkFile", "label": "Link File"}, {"key": "Keterangan", "label": "Keterangan", "type": "textarea", "full": true}];
+export default function Page(){return <CrudPage eyebrow="ADMINISTRASI" title="Surat" description="Kelola surat masuk dan keluar." module="surat" loader={()=>moduleService.letters()} columns={columns} fields={fields}/>}

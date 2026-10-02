@@ -1,12 +1,3 @@
-import PageHeader from '../../components/common/PageHeader';
-import DataTable from '../../components/common/DataTable';
-import {moduleService} from '../../services/module.service';
-import {useRemoteData} from '../../hooks/useRemoteData';
-const columns=[{key:'NamaKegiatan',label:'Nama Kegiatan'},{key:'Tanggal',label:'Tanggal'},{key:'Lokasi',label:'Lokasi'},{key:'Status',label:'Status'}];
-export default function Page(){
- const {data,loading,error,reload}=useRemoteData(()=>moduleService.activities(),[]);
- const rows=(data||[]).map((r,i)=>({...r,id:r.ID||i}));
- return <><PageHeader eyebrow="KEGIATAN" title="Kegiatan" description="Agenda, lokasi, waktu, dan radius absensi."/>
- <section className="panel"><div className="toolbar"><span>{loading?'Memuat data...':`${rows.length} data`}</span><button className="btn" onClick={reload} disabled={loading}>Muat Ulang</button></div>
- {error&&<div className="alert">{error}</div>}<DataTable columns={columns} rows={rows} empty="Belum ada data."/></section></>;
-}
+import CrudPage from '../../components/common/CrudPage';import {moduleService} from '../../services/module.service';
+const columns=[{key:"NamaKegiatan",label:"Nama Kegiatan"},{key:"Tanggal",label:"Tanggal"},{key:"Jenis",label:"Jenis"},{key:"Status",label:"Status"}];const fields=[{"key": "NamaKegiatan", "label": "Nama Kegiatan", "required": true}, {"key": "Tanggal", "label": "Tanggal", "type": "date", "required": true}, {"key": "Jenis", "label": "Jenis", "type": "select", "options": ["Latihan", "Rapat", "Pendidikan", "Bakti Sosial", "Kunjungan", "Upacara", "Lainnya"]}, {"key": "Lokasi", "label": "Lokasi"}, {"key": "PenanggungJawab", "label": "Penanggung Jawab"}, {"key": "AbsensiMulai", "label": "Absensi Mulai", "type": "time"}, {"key": "AbsensiSelesai", "label": "Absensi Selesai", "type": "time"}, {"key": "RadiusAktif", "label": "Radius", "type": "select", "options": ["Aktif", "Nonaktif"]}, {"key": "AbsensiLatitude", "label": "Latitude", "type": "number", "step": "any"}, {"key": "AbsensiLongitude", "label": "Longitude", "type": "number", "step": "any"}, {"key": "AbsensiRadiusMeter", "label": "Radius Meter", "type": "number", "min": "1"}];
+export default function Page(){return <CrudPage eyebrow="KEGIATAN" title="Kegiatan" description="Kelola agenda dan aturan absensi kegiatan." module="kegiatan" loader={()=>moduleService.activities()} columns={columns} fields={fields}/>}

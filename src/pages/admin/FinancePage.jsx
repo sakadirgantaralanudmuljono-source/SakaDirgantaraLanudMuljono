@@ -1,12 +1,3 @@
-import PageHeader from '../../components/common/PageHeader';
-import DataTable from '../../components/common/DataTable';
-import {moduleService} from '../../services/module.service';
-import {useRemoteData} from '../../hooks/useRemoteData';
-const columns=[{key:'Tanggal',label:'Tanggal'},{key:'Keterangan',label:'Keterangan'},{key:'Jenis',label:'Jenis'},{key:'Nominal',label:'Nominal'}];
-export default function Page(){
- const {data,loading,error,reload}=useRemoteData(()=>moduleService.cash(),[]);
- const rows=(data||[]).map((r,i)=>({...r,id:r.ID||i}));
- return <><PageHeader eyebrow="KEUANGAN" title="Kas Organisasi" description="Pemasukan dan pengeluaran organisasi."/>
- <section className="panel"><div className="toolbar"><span>{loading?'Memuat data...':`${rows.length} data`}</span><button className="btn" onClick={reload} disabled={loading}>Muat Ulang</button></div>
- {error&&<div className="alert">{error}</div>}<DataTable columns={columns} rows={rows} empty="Belum ada data."/></section></>;
-}
+import CrudPage from '../../components/common/CrudPage';import {moduleService} from '../../services/module.service';
+const columns=[{key:"Tanggal",label:"Tanggal"},{key:"Jenis",label:"Jenis"},{key:"Keterangan",label:"Keterangan"},{key:"Nominal",label:"Nominal"}];const fields=[{"key": "Tanggal", "label": "Tanggal", "type": "date", "required": true}, {"key": "Jenis", "label": "Jenis", "type": "select", "options": ["Pemasukan", "Pengeluaran"], "required": true}, {"key": "Nominal", "label": "Nominal", "type": "number", "min": "0", "required": true}, {"key": "NoBukti", "label": "No. Bukti"}, {"key": "Keterangan", "label": "Keterangan", "type": "textarea", "full": true}];
+export default function Page(){return <CrudPage eyebrow="KEUANGAN" title="Kas Organisasi" description="Kelola transaksi pemasukan dan pengeluaran." module="kas" loader={()=>moduleService.cash()} columns={columns} fields={fields}/>}
