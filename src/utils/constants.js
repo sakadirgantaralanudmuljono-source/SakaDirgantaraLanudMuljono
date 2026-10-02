@@ -1,4 +1,1 @@
-export const NAV_ADMIN=[
- ['dashboard','Dashboard'],['anggota','Anggota'],['kegiatan','Kegiatan'],['absensi','Absensi'],['penilaian','Penilaian'],['kas','Kas Organisasi'],['inventaris','Inventaris'],['surat','Surat'],['pengurus','Struktur Pengurus'],['users','Pengguna'],['maintenance','System Maintenance']
-];
-export const NAV_MEMBER=[['dashboard','Dashboard'],['profil','Profil Saya'],['absensi','Absensi Saya'],['penilaian','Penilaian Saya']];
+export const NAV_ADMIN=[['dashboard','Dashboard'],['anggota','Anggota'],['kegiatan','Kegiatan'],['absensi','Absensi'],['penilaian','Penilaian'],['kas','Kas Organisasi'],['inventaris','Inventaris'],['surat','Surat'],['pengurus','Struktur Pengurus'],['users','Pengguna'],['maintenance','System Maintenance']];export const NAV_MEMBER=[['dashboard','Beranda'],['profil','Profil Saya'],['absensi','Absensi Saya'],['penilaian','Penilaian Saya']];
