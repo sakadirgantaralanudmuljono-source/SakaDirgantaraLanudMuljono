@@ -12,3 +12,5 @@
 .icon-btn{border:0;background:transparent;font-size:28px;cursor:pointer}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.form-grid label{display:grid;gap:7px;font-size:13px;font-weight:600}.form-grid .full{grid-column:1/-1}
 .form-grid input,.form-grid select,.form-grid textarea{width:100%;padding:11px 12px;border:1px solid #dfe3e8;border-radius:9px;font:inherit}.form-grid textarea{min-height:90px;resize:vertical}
 .btn.small{padding:6px 9px;font-size:12px}.btn.danger{border-color:#fecaca;color:#b91c1c}.row-actions{white-space:nowrap}@media(max-width:640px){.form-grid{grid-template-columns:1fr}.form-grid .full{grid-column:auto}}
+
+.permission-row{display:flex;justify-content:space-between;gap:16px;align-items:center;padding:14px 0;border-bottom:1px solid #eef0f3}.panel h3{margin-top:24px}.panel>label select{margin-left:10px;padding:9px;border:1px solid #dfe3e8;border-radius:8px}
