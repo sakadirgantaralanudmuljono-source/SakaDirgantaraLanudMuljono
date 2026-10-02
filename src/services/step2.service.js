@@ -10,5 +10,10 @@ export const step2Service={
  uploadDoc:(kegiatanId,file)=>apiRequest('activity.documentation.upload',{kegiatanId,file}),
  previewDoc:id=>apiRequest('activity.documentation.preview',{id}),updateDoc:(id,data)=>apiRequest('activity.documentation.update',{id,data}),deleteDoc:id=>apiRequest('activity.documentation.delete',{id}),
  notifications:()=>apiRequest('notifications.get'),markRead:ids=>apiRequest('notifications.read',{ids}),
+ attendanceLink:kegiatanId=>apiRequest('activity.attendanceLink',{kegiatanId}),
+ permissionLink:kegiatanId=>apiRequest('activity.permissionLink',{kegiatanId}),
+ permissionSummary:kegiatanId=>apiRequest('activity.permissionSummary',{kegiatanId}),
+ generateAssessmentPdf:period=>apiRequest('assessment.pdf.generate',{period}),
+ generateReportPdf:kegiatanId=>apiRequest('activity.report.pdf',{kegiatanId}),
  permissions:()=>apiRequest('permissions.get'),savePermissions:rows=>apiRequest('permissions.save',{rows})
 };
