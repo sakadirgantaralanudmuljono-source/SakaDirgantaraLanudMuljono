@@ -1,1 +1,0 @@
-export default function PageHeader({eyebrow="MODUL",title,description,action}){return <div className="page-head"><div><p className="eyebrow">{eyebrow}</p><h1>{title}</h1><p>{description}</p></div>{action}</div>}
