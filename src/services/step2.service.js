@@ -15,5 +15,9 @@ export const step2Service={
  permissionSummary:kegiatanId=>apiRequest('activity.permissionSummary',{kegiatanId}),
  generateAssessmentPdf:period=>apiRequest('assessment.pdf.generate',{period}),
  generateReportPdf:kegiatanId=>apiRequest('activity.report.pdf',{kegiatanId}),
+ uploadInventoryPhoto:(kegiatanId,recordId,phase,file)=>apiRequest('activity.inventory.photo',{kegiatanId,recordId,phase,file}),
+ permissionProof:izinId=>apiRequest('permission.proofPreview',{izinId}),
+ permissionDetail:id=>apiRequest('notifications.permissionDetail',{id}),
+ permissionVerify:(id,decision,note='')=>apiRequest('notifications.permissionVerify',{id,decision,note}),
  permissions:()=>apiRequest('permissions.get'),savePermissions:rows=>apiRequest('permissions.save',{rows})
 };
