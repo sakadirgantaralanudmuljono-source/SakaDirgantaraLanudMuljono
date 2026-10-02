@@ -1,24 +1,13 @@
-import {useMemo,useState} from 'react';
-import PageHeader from '../../components/common/PageHeader';
-import DataTable from '../../components/common/DataTable';
-import {assessmentService} from '../../services/assessment.service';
-import {useRemoteData} from '../../hooks/useRemoteData';
-
-function currentPeriod(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`}
-const columns=[
- {key:'NTA',label:'NTA'}, {key:'Nama',label:'Nama'}, {key:'Krida',label:'Krida'},
- {key:'score',label:'Nilai',render:v=>v==null?'—':Number(v).toFixed(2)},
- {key:'predicate',label:'Predikat'},
- {key:'attendance',label:'Kehadiran',render:v=>v?`${v.Hadir||0} hadir / ${v.meetings||0} kegiatan`:'—'}
-];
-export default function AssessmentPage(){
- const [period,setPeriod]=useState(currentPeriod());
- const loader=useMemo(()=>()=>assessmentService.monthly(period),[period]);
- const {data,loading,error,reload}=useRemoteData(loader,[period]);
- const rows=data?.rows||[];
- return <><PageHeader eyebrow="PENILAIAN" title="Penilaian & SKK" description="Rekap penilaian aktual dari backend Google Apps Script."/>
- <section className="panel"><div className="toolbar"><label>Periode <input type="month" value={period} onChange={e=>setPeriod(e.target.value)}/></label><span>{loading?'Memuat...':`${rows.length} anggota`}</span><button className="btn" onClick={reload}>Muat Ulang</button></div>
- {error&&<div className="alert">{error}</div>}
- {data?.summary&&<div className="stat-grid compact-stats"><article className="stat-card"><small>Anggota Dinilai</small><strong>{data.summary.assessedMembers}/{data.summary.totalMembers}</strong></article><article className="stat-card"><small>Rata-rata</small><strong>{Number(data.summary.averageScore||0).toFixed(2)}</strong></article><article className="stat-card"><small>Kegiatan</small><strong>{data.meetingCount||0}</strong></article><article className="stat-card"><small>SKK Selesai</small><strong>{data.summary.skkCompleted||0}</strong></article></div>}
- <DataTable columns={columns} rows={rows} empty={loading?'Memuat data penilaian...':'Belum ada data penilaian pada periode ini.'}/></section></>;
-}
+import {useMemo,useState} from 'react';import PageHeader from '../../components/common/PageHeader';import DataTable from '../../components/common/DataTable';import CrudModal from '../../components/common/CrudModal';import {assessmentService} from '../../services/assessment.service';import {step2Service} from '../../services/step2.service';import {moduleService} from '../../services/module.service';import {useRemoteData} from '../../hooks/useRemoteData';
+function period(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`}function today(){return new Date().toISOString().slice(0,10)}
+export default function Page(){const [per,setPer]=useState(period()),[member,setMember]=useState(''),[skk,setSkk]=useState(null),[changes,setChanges]=useState({}),[modal,setModal]=useState(false),[busy,setBusy]=useState(false),[msg,setMsg]=useState('');
+ const loader=useMemo(()=>()=>assessmentService.monthly(per),[per]);const {data,error,reload}=useRemoteData(loader,[per]);const {data:members}=useRemoteData(()=>moduleService.members(),[]);
+ const rows=data?.rows||[],components=data?.components||data?.komponen||[];
+ async function run(fn){setBusy(true);setMsg('');try{await fn();await reload()}catch(e){setMsg(e.message)}finally{setBusy(false)}}
+ async function openSkk(id){setMember(id);setBusy(true);try{const x=await assessmentService.skk(id);setSkk(x);const done={};(x.completion||[]).forEach(v=>done[v.ReferensiID]=true);setChanges(done)}catch(e){setMsg(e.message)}finally{setBusy(false)}}
+ async function saveSkk(){const original=new Set((skk.completion||[]).map(x=>String(x.ReferensiID)));const diff=(skk.catalog||[]).filter(x=>original.has(String(x.ID))!==!!changes[x.ID]).map(x=>({MasterSKKID:x.ID,checked:!!changes[x.ID]}));await run(()=>step2Service.saveSkk(member,today(),diff));await openSkk(member)}
+ const cols=[{key:'NTA',label:'NTA'},{key:'Nama',label:'Nama'},{key:'Krida',label:'Krida'},{key:'score',label:'Nilai'},{key:'predicate',label:'Predikat'},{key:'_',label:'Aksi',render:(_,r)=><button className="btn small" onClick={()=>openSkk(r.ID)}>Checklist SKK</button>}];
+ const fields=[{key:'Tanggal',label:'Tanggal',type:'date',required:true},{key:'AnggotaID',label:'Anggota',type:'select',required:true,options:(members||[]).map(x=>({value:x.ID,label:x.Nama}))},{key:'KomponenID',label:'Komponen Manual',type:'select',required:true,options:components.filter(x=>String(x.TipeSumber).toUpperCase()==='MANUAL'&&!String(x.Kode||'').toUpperCase().includes('SKK')).map(x=>({value:x.ID,label:x.NamaKomponen}))},{key:'Poin',label:'Poin',type:'number',min:'0',step:'any',required:true},{key:'Catatan',label:'Catatan',type:'textarea',full:true}];
+ return <><PageHeader eyebrow="PENILAIAN" title="Penilaian & SKK" description="Input penilaian manual dan checklist SKK menggunakan backend penilaian V3.2."/><section className="panel"><div className="toolbar"><label>Periode <input type="month" value={per} onChange={e=>setPer(e.target.value)}/></label><button className="btn primary" onClick={()=>setModal(true)}>+ Input Nilai</button></div>{(error||msg)&&<div className="alert">{error||msg}</div>}<DataTable columns={cols} rows={rows} empty="Belum ada data penilaian."/></section>
+ {skk&&<section className="panel"><div className="toolbar"><h3>Checklist SKK — {skk.member?.Nama}</h3><button className="btn" onClick={()=>setSkk(null)}>Tutup</button></div><div className="check-grid">{(skk.catalog||[]).map(x=><label key={x.ID}><input type="checkbox" checked={!!changes[x.ID]} onChange={e=>setChanges(v=>({...v,[x.ID]:e.target.checked}))}/> <span><strong>{x.KelompokSKK}</strong><br/>{x.Butir}</span></label>)}</div><div className="modal-actions"><button className="btn primary" disabled={busy} onClick={saveSkk}>Simpan Checklist</button></div></section>}
+ <CrudModal open={modal} title="Input Penilaian Manual" fields={fields} initial={{Tanggal:today()}} saving={busy} onClose={()=>setModal(false)} onSave={async x=>{await run(()=>step2Service.saveAssessment(x));setModal(false)}}/></>}
