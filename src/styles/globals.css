@@ -130,3 +130,12 @@ button,input,select,textarea{font:inherit}button{color:inherit}.app-shell{min-he
 .command-card small,.command-card b{display:block}
 .command-card small{color:var(--muted);font-size:12px;margin-top:5px}
 @media(max-width:900px){.global-search{display:none}.workflow-progress-item{grid-template-columns:90px 1fr 40px}}
+
+/* UIUX V4 MODULE EXPERIENCE */
+.module-overview-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:20px}
+.module-summary{background:var(--card,#fff);border:1px solid #e5e7eb;border-radius:18px;padding:18px;display:flex;gap:14px;align-items:center;box-shadow:0 8px 24px rgba(15,23,42,.05)}
+.module-summary svg{padding:10px;background:#eff6ff;border-radius:12px}
+.module-summary small{display:block;color:#64748b;font-size:12px}
+.module-summary b{display:block;margin-top:5px}
+.workflow-modern{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:768px){.module-overview-grid,.workflow-modern{grid-template-columns:1fr}}
