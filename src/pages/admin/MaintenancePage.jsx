@@ -12,6 +12,7 @@ export default function Page() {
   const [report, setReport] = useState(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
+  const [importErrors,setImportErrors]=useState([]);
   const [progress, setProgress] = useState('');
 
   async function check() {
@@ -65,6 +66,7 @@ export default function Page() {
     if (file.size > 5 * 1024 * 1024) { setMsg('File maksimum 5 MB.'); return; }
     if (!confirm('Import menggunakan mode gabung/update. Data lama tidak dihapus. Lanjutkan?')) return;
     setBusy(true);
+    setImportErrors([]);
     let imported = 0;
     let failed = 0;
     let context = { anggotaIdMap: {}, kegiatanIdMap: {} };
@@ -75,8 +77,10 @@ export default function Page() {
       const parsed = {};
       for (const name of order) {
         if (!book.SheetNames.includes(name)) continue;
+        const headers=XLSX.utils.sheet_to_json(book.Sheets[name],{header:1})[0]||[];
+        if(name==='Users'&&headers.includes('PasswordHash'))throw new Error('Gunakan kolom Password untuk teks password. PasswordHash dihitung otomatis oleh backend.');
         const rows = XLSX.utils.sheet_to_json(book.Sheets[name], { defval: '' });
-        parsed[name] = rows.map((x, i) => ({ ...x, __rowNumber: i + 2 }));
+        parsed[name] = rows.map((x, i) => ({ ...x, __rowNumber: (x.__rowNum__ ?? i + 1) + 1 }));
         total += rows.length;
       }
       if (!total) throw new Error('Tidak ada sheet yang didukung. Gunakan nama sheet Anggota, Kegiatan, Kas, Inventaris, Surat, Absensi, Pengurus, atau Users.');
@@ -87,6 +91,7 @@ export default function Page() {
           setProgress(`${name}: ${done}/${total}`);
           const x = await maintenanceService.importBatch(name, rows.slice(i, i + 25), context);
           context = x.context || context;
+          setImportErrors(previous=>[...previous,...(x.report?.errors||[]).map(error=>({sheet:name,row:error.row,message:error.message}))]);
           imported += Number(x.imported || 0);
           failed += Number(x.failed || 0);
           done += Math.min(25, rows.length - i);
@@ -94,8 +99,8 @@ export default function Page() {
       }
       await maintenanceService.finishImport({ imported, failed });
       setProgress('');
-      setMsg(`Import selesai: ${imported} berhasil, ${failed} gagal.`);
       await check();
+      setMsg(`Import selesai: ${imported} berhasil, ${failed} gagal.`);
     } catch (e) {
       setMsg(`Import berhenti: ${e.message}. Batch yang sudah selesai tetap tersimpan.`);
     } finally {
@@ -119,13 +124,17 @@ export default function Page() {
         <div className="row-actions">
           <button className="btn" disabled={busy} onClick={check}>Cek Struktur</button>
           <button className="btn" disabled={busy} onClick={update}>Update Struktur</button>
-          <label className="btn">Import Excel<input hidden type="file" accept=".xlsx,.xls" onChange={importExcel} /></label>
+          <a className="btn" href="/templates/template_import_saka.xlsx" download>Unduh Template Excel</a>
+          <label className="btn" aria-disabled={busy}>Import Excel<input hidden disabled={busy} type="file" accept=".xlsx,.xls" onChange={importExcel} /></label>
         </div>
         <button className="btn danger" disabled={busy} onClick={reset}>Reset Semua Sesi</button>
       </div>
+      <p className="muted">Isi sheet Anggota dan Users untuk impor anggota beserta akun secara massal. Hubungkan melalui NTA yang sama atau AnggotaID. Password minimal 8 karakter ditulis pada kolom Password dan di-hash otomatis oleh backend. Kosongkan Password saat memperbarui akun untuk mempertahankan password lama. Lihat sheet Petunjuk dan Contoh pada template.</p>
       {progress && <div className="alert">{progress}</div>}
       {msg && <pre className="system-result">{msg}</pre>}
+      {importErrors.length>0&&<DataTable columns={[{key:'sheet',label:'Sheet'},{key:'row',label:'Baris Excel'},{key:'message',label:'Penyebab gagal'}]} rows={importErrors}/>}
       {report && <>
+        {report.automation&&<div className={report.automation.active?'success-line':'alert'}>{report.automation.message}</div>}
         <DataTable columns={cols} rows={report.sheets || []} empty="Tidak ada laporan struktur." />
         {report.extraSheets?.length > 0 && <div className="alert">Sheet ekstra: {report.extraSheets.join(', ')}</div>}
       </>}
