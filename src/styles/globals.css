@@ -115,3 +115,18 @@ button,input,select,textarea{font:inherit}button{color:inherit}.app-shell{min-he
  .mobile-nav a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#667085;text-decoration:none;font-size:10px;font-weight:600;flex:1;border-radius:12px}
  .mobile-nav a.active{color:var(--primary);background:var(--primary-soft)}
 }
+
+
+/* UIUX V3 Module Experience */
+.global-search{margin-left:24px;width:min(420px,35vw);height:40px;background:#fff;border:1px solid var(--line);border-radius:14px;display:flex;align-items:center;gap:10px;padding:0 14px;color:var(--subtle)}
+.global-search input{border:0;outline:0;background:transparent;width:100%;font-size:13px;color:var(--ink)}
+.global-search input::placeholder{color:#98a2b3}
+.workflow-progress{display:grid;gap:14px}
+.workflow-progress-item{display:grid;grid-template-columns:130px 1fr 50px;align-items:center;gap:12px;font-size:13px}
+.workflow-progress-item .track{height:8px;background:#e5e7eb;border-radius:99px;overflow:hidden}
+.workflow-progress-item .track span{display:block;height:100%;background:#2563eb;border-radius:99px}
+.page-command{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.page-command .command-card{flex:1;min-width:180px;padding:16px;border:1px solid var(--line);background:#fff;border-radius:16px}
+.command-card small,.command-card b{display:block}
+.command-card small{color:var(--muted);font-size:12px;margin-top:5px}
+@media(max-width:900px){.global-search{display:none}.workflow-progress-item{grid-template-columns:90px 1fr 40px}}

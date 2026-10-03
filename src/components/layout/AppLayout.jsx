@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { NAV_ADMIN, NAV_MEMBER, ADMIN_ONLY, CORE_STAFF, MODULE_BY_PATH } from '../../utils/constants';
 import { moduleService } from '../../services/module.service';
+import GlobalSearch from '../common/GlobalSearch';
 
 const ICONS = {dashboard:LayoutDashboard,anggota:Users,kegiatan:CalendarDays,'activity-details':ClipboardCheck,absensi:ClipboardCheck,penilaian:ChartNoAxesCombined,kas:WalletCards,inventaris:Package,surat:Mail,pengurus:Network,notifications:Activity,permissions:ShieldCheck,users:UserCog,maintenance:Settings,profil:UserCog};
 const TITLES = Object.fromEntries([...NAV_ADMIN,...NAV_MEMBER].flatMap(group=>group.items));
@@ -31,7 +32,7 @@ export default function AppLayout(){
   <main className="main">
    <header className="topbar">
     <button className="mobile-menu" onClick={()=>setOpen(!open)}><Menu/></button>
-    <div className="topbar-title"><small>SAKA DIRGANTARA</small><b>{TITLES[page]||'Sistem Informasi Organisasi'}</b></div>
+    <div className="topbar-title"><small>SAKA DIRGANTARA</small><b>{TITLES[page]||'Sistem Informasi Organisasi'}</b></div><GlobalSearch />
     <div className="topbar-actions"><button className="icon-button"><Bell size={18}/><i/></button><span className={'system-chip '+apiState}><i/>{apiState==='terhubung'?'API aktif':apiState==='lokal'?'Mode lokal':'Memeriksa API'}</span></div>
    </header>
    <section className="content"><Outlet/></section>
