@@ -95,3 +95,23 @@ button,input,select,textarea{font:inherit}button{color:inherit}.app-shell{min-he
 .workflow-modern{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.workflow-modern div{padding:16px;border-radius:14px;background:var(--surface-soft);border:1px solid var(--line)}.workflow-modern svg{color:var(--primary);margin-bottom:12px}.workflow-modern b,.workflow-modern span{display:block}.workflow-modern span{font-size:12px;color:var(--muted);margin-top:5px}
 @media(max-width:900px){.quick-action-grid,.workflow-modern{grid-template-columns:1fr 1fr}}
 @media(max-width:680px){.quick-action-grid,.workflow-modern{grid-template-columns:1fr}.panel-title-row{display:block}.panel-title-row small{display:block;margin-top:5px}}
+
+/* UIUX V2 Layout System */
+.sidebar-search{height:38px;border:1px solid var(--line);background:var(--surface-soft);border-radius:12px;display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--subtle);font-size:12px;margin:0 8px 18px}
+.topbar-actions{margin-left:auto;display:flex;align-items:center;gap:12px}
+.icon-button{position:relative;width:38px;height:38px;border-radius:12px;border:1px solid var(--line);background:#fff;display:grid;place-items:center;color:#667085;cursor:pointer}
+.icon-button i{position:absolute;right:8px;top:7px;width:7px;height:7px;border-radius:50%;background:#ef4444;border:1px solid white}
+.mobile-nav{display:none}
+
+@media(max-width:900px){
+ .sidebar{transform:translateX(-100%);transition:.25s;box-shadow:0 20px 50px rgba(15,23,42,.18)}
+ .sidebar.open{transform:translateX(0)}
+ .main{margin-left:0;width:100%}
+ .mobile-menu{display:grid}
+ .content{padding:20px 18px 90px}
+ .topbar{padding:0 16px}
+ .system-chip{display:none}
+ .mobile-nav{position:fixed;display:flex;bottom:0;left:0;right:0;height:68px;background:#fff;border-top:1px solid var(--line);z-index:50;justify-content:space-around;padding:8px 10px}
+ .mobile-nav a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#667085;text-decoration:none;font-size:10px;font-weight:600;flex:1;border-radius:12px}
+ .mobile-nav a.active{color:var(--primary);background:var(--primary-soft)}
+}
