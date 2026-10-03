@@ -1,4 +1,6 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
+import { CalendarDays, MapPin, UserRound, Pencil, RefreshCcw, ShieldCheck, UsersRound, Trash2 } from 'lucide-react';
+import { useToast } from '../../components/common/ToastProvider';
 import LoadingOverlay from '../../components/common/LoadingOverlay';
 import PageHeader from '../../components/common/PageHeader';
 import DataTable from '../../components/common/DataTable';
@@ -17,6 +19,7 @@ const toFile = f => new Promise((res, rej) => {
 const today = () => new Date().toISOString().slice(0, 10);
 
 export default function Page() {
+  const { showToast } = useToast();
   const { data: acts } = useRemoteData(() => moduleService.activities(), []);
   const { data: inventory } = useRemoteData(() => moduleService.inventory(), []);
   const [kid, setKid] = useState('');
@@ -31,6 +34,7 @@ export default function Page() {
   const [busy, setBusy] = useState(false);
   const [pdfUrl, setPdfUrl] = useState('');
   const acting = useRef(false);
+  useEffect(()=>{ if(msg) showToast(msg, msg.toLowerCase().includes('gagal') ? 'error' : 'success'); },[msg]);
   const uses = data?.inventarisKegiatan || [];
   const docs = data?.dokumentasi || [];
   const report = data?.laporan || {};
@@ -210,9 +214,21 @@ export default function Page() {
           <option value="">Pilih kegiatan...</option>{filteredActivities.map(x => <option key={x.ID} value={x.ID}>{x.NamaKegiatan} — {x.Tanggal}</option>)}
         </select>
        </div>
-      {msg && <div className="alert" role="status" aria-live="polite">{msg}</div>}
+      
     </section>
     {kid && <>
+      <section className="panel activity-detail-hero">
+        <div>
+          <h2>{(acts||[]).find(x=>String(x.ID)===String(kid))?.NamaKegiatan || 'Detail Kegiatan'}</h2>
+          <p className="muted"><CalendarDays size={15}/> {(acts||[]).find(x=>String(x.ID)===String(kid))?.Tanggal || '-'} &nbsp; | &nbsp; <RefreshCcw size={15}/> Detail operasional</p>
+        </div>
+        <div className="quick-actions">
+          <button className="btn small"><Pencil size={16}/> Edit</button>
+          <button className="btn small"><ShieldCheck size={16}/> Izin</button>
+          <button className="btn small"><UsersRound size={16}/> Absen</button>
+          <button className="btn small danger"><Trash2 size={16}/> Hapus</button>
+        </div>
+      </section>
       <section className="panel section-gap">
         <div className="toolbar toolbar-between">
           <h2>Ringkasan Izin</h2>
