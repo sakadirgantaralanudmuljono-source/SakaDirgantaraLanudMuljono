@@ -47,3 +47,14 @@ button,input,select,textarea{font:inherit}button{color:inherit}.app-shell{min-he
 @media(max-width:900px){.workflow,.shortcut-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:680px){.workflow,.shortcut-grid{grid-template-columns:1fr}}
 .toolbar-between{justify-content:space-between}.toolbar h2,.toolbar h3{margin:0}.detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:16px}.detail-grid>div{padding:12px;background:var(--surface-soft);border:1px solid var(--line);border-radius:9px}.detail-grid small,.detail-grid b{display:block}.detail-grid small{font-size:10px;color:var(--muted);margin-bottom:5px}.detail-grid b{font-size:12px}.detail-grid .wide{grid-column:1/-1}.proof-preview{padding:14px;border:1px solid var(--line);border-radius:10px;background:var(--surface-soft)}.proof-preview img{display:block;max-width:100%;max-height:520px;margin:auto;border-radius:8px}@media(max-width:680px){.toolbar-between{align-items:stretch}.detail-grid{grid-template-columns:1fr}.detail-grid .wide{grid-column:auto}}
+
+/* Activity mobile UX */
+.action-overlay{position:fixed;inset:0;background:rgba(15,23,42,.42);z-index:1200;display:flex;align-items:flex-end}
+.action-sheet{width:100%;background:#fff;border-radius:18px 18px 0 0;padding:18px;box-shadow:0 -10px 40px rgba(0,0,0,.18);animation:slideSheet .18s ease}
+.action-sheet-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.action-item{display:flex;width:100%;border:0;background:#fff;padding:13px;border-radius:10px;text-align:left;font-size:14px;cursor:pointer}
+.action-item:hover{background:#f8fafc}.action-item.danger{color:#b42318}
+.activity-picker{display:grid;grid-template-columns:1.5fr .8fr .8fr 1.5fr;gap:10px;align-items:center}
+.activity-picker input,.activity-picker select{width:100%}
+@keyframes slideSheet{from{transform:translateY(20px);opacity:.5}to{transform:none;opacity:1}}
+@media(max-width:680px){.activity-picker{grid-template-columns:1fr}.action-sheet{padding-bottom:28px}}

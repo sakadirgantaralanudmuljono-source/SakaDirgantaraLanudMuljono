@@ -19,6 +19,9 @@ export default function Page() {
   const { data: acts } = useRemoteData(() => moduleService.activities(), []);
   const { data: inventory } = useRemoteData(() => moduleService.inventory(), []);
   const [kid, setKid] = useState('');
+  const [activitySearch, setActivitySearch] = useState('');
+  const [activityMonth, setActivityMonth] = useState('');
+  const [activityPeriod, setActivityPeriod] = useState('');
   const [data, setData] = useState(null);
   const [summary, setSummary] = useState(null);
   const [modal, setModal] = useState(null);
@@ -30,6 +33,13 @@ export default function Page() {
   const uses = data?.inventarisKegiatan || [];
   const docs = data?.dokumentasi || [];
   const report = data?.laporan || {};
+  const filteredActivities = (acts || []).filter(x => {
+    const text = `${x.NamaKegiatan || ''} ${x.Lokasi || ''}`.toLowerCase();
+    const okText = !activitySearch || text.includes(activitySearch.toLowerCase());
+    const okMonth = !activityMonth || String(x.Tanggal || '').slice(5,7) === activityMonth;
+    const okPeriod = !activityPeriod || String(x.Periode || x.Tahun || '').includes(activityPeriod);
+    return okText && okMonth && okPeriod;
+  });
 
   async function load(id = kid) {
     if (!id) { setData(null); setSummary(null); return; }
@@ -185,7 +195,21 @@ export default function Page() {
   return <>
     <PageHeader eyebrow="DETAIL KEGIATAN" title="Detail & Laporan Kegiatan" description="Urutan kerja: pilih kegiatan, cek izin, catat inventaris, unggah dokumentasi, isi laporan, lalu buat PDF." />
     <section className="panel">
-      <label>Kegiatan <select disabled={busy} value={kid} onChange={e => { setPdfUrl(''); setData(null); setSummary(null); setKid(e.target.value); load(e.target.value); }}><option value="">Pilih...</option>{(acts || []).map(x => <option key={x.ID} value={x.ID}>{x.NamaKegiatan} — {x.Tanggal}</option>)}</select></label>
+      <div className="activity-picker">
+        <input placeholder="Cari kegiatan..." value={activitySearch} onChange={e=>setActivitySearch(e.target.value)} />
+        <select value={activityMonth} onChange={e=>setActivityMonth(e.target.value)}>
+          <option value="">Semua Bulan</option>
+          {[1,2,3,4,5,6,7,8,9,10,11,12].map(m=><option key={m} value={String(m).padStart(2,'0')}>Bulan {m}</option>)}
+        </select>
+        <select value={activityPeriod} onChange={e=>setActivityPeriod(e.target.value)}>
+          <option value="">Semua Periode</option>
+          <option value="2026">2026</option>
+          <option value="2025">2025</option>
+        </select>
+        <select disabled={busy} value={kid} onChange={e => { setPdfUrl(''); setData(null); setSummary(null); setKid(e.target.value); load(e.target.value); }}>
+          <option value="">Pilih kegiatan...</option>{filteredActivities.map(x => <option key={x.ID} value={x.ID}>{x.NamaKegiatan} — {x.Tanggal}</option>)}
+        </select>
+       </div>
       {msg && <div className="alert" role="status" aria-live="polite">{msg}</div>}
     </section>
     {kid && <>

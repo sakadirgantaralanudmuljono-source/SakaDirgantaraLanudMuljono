@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import PageHeader from '../../components/common/PageHeader';
 import DataTable from '../../components/common/DataTable';
 import CrudModal from '../../components/common/CrudModal';
+import ActionSheet from '../../components/common/ActionSheet';
 import { moduleService } from '../../services/module.service';
 import { crudService } from '../../services/crud.service';
 import { operationsService } from '../../services/operations.service';
@@ -26,6 +27,7 @@ export default function Page() {
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const [active, setActive] = useState(null);
+  const [sheet, setSheet] = useState(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
 
@@ -91,7 +93,7 @@ export default function Page() {
     { key: 'NamaKegiatan', label: 'Kegiatan' },
     { key: 'Tanggal', label: 'Tanggal' },
     { key: 'Status', label: 'Status' },
-    { key: '__', label: 'Aksi', render: (_, r) => <button className="btn small" onClick={() => setActive(r)}>Kelola</button> }
+    { key: '__', label: 'Aksi', render: (_, r) => <button className="btn small" onClick={() => setSheet(r)}>⋮</button> }
   ], []);
 
   return <>
@@ -102,7 +104,7 @@ export default function Page() {
         <button className="btn primary" onClick={() => { setEditing(null); setModal(true); }}>+ Tambah Kegiatan</button>
       </div>
       {(error || msg) && <div className="alert">{error || msg}</div>}
-      <DataTable columns={cols} rows={data || []} empty="Belum ada kegiatan." searchable pageSize={10} />
+      <DataTable columns={cols} rows={data || []} empty="Belum ada kegiatan." searchable pageSize={5} />
     </section>
     {active && <section className="panel section-gap">
       <div className="toolbar toolbar-between">
@@ -117,6 +119,14 @@ export default function Page() {
       </div>
       <div className="modal-actions"><button className="btn small danger" disabled={busy} onClick={() => del(active)}>Hapus Kegiatan</button></div>
     </section>}
+    <ActionSheet open={!!sheet} title={sheet?.NamaKegiatan || 'Kelola Kegiatan'} onClose={() => setSheet(null)} items={[
+      {label:'Detail Kegiatan', icon:'📄', onClick:()=>setActive(sheet)},
+      {label:'Edit', icon:'✏️', onClick:()=>{setEditing(sheet);setModal(true);}},
+      {label:'Mulai / Ubah Status', icon:'🔄', onClick:()=>trans(sheet, 'Berjalan')},
+      {label:'Atur Izin', icon:'🔐', onClick:()=>rule(sheet)},
+      {label:'Link Absensi', icon:'👥', onClick:()=>copyLink('absen',sheet.ID)},
+      {label:'Hapus', icon:'🗑', danger:true, onClick:()=>del(sheet)}
+    ]}/>
     <CrudModal open={modal} title={editing ? 'Edit Kegiatan' : 'Tambah Kegiatan'} fields={fields} initial={editing || {}} saving={busy} onClose={() => setModal(false)} onSave={save} />
   </>;
 }
