@@ -82,3 +82,8 @@ Pastikan kegiatan uji membuka jendela izin/absensi dan akun memiliki hak akses y
 - Added GAS/DataOwnership.gs
 - Added ownership validation before gateway dispatch
 - Protected memberId, kegiatanId, permission ownership manipulation
+
+
+## Database Architecture Optimization
+- Added GAS/DatabaseArchitecture.gs
+- Added optimized read/write helper layer
