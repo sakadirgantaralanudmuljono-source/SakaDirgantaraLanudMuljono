@@ -83,3 +83,15 @@ button,input,select,textarea{font:inherit}button{color:inherit}.app-shell{min-he
 @media(max-width:680px){.mobile-data-card-list{display:grid;gap:12px}.mobile-data-card-list + *{}.section-gap .data-table,.section-gap table{display:none}.mobile-data-card .row-actions{margin-top:8px;display:flex;flex-wrap:wrap;gap:8px}.mobile-data-card .btn.small{flex:1}.confirm-dialog{padding:24px}.confirm-actions{flex-direction:column-reverse}.confirm-actions button{width:100%;justify-content:center}}
 
 .global-loading-overlay{position:fixed;inset:0;background:rgba(15,23,42,.35);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:9999}.global-loading-card{background:#fff;border-radius:20px;padding:28px;min-width:280px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.18);display:flex;flex-direction:column;gap:14px;align-items:center}.spin{animation:spin 1s linear infinite}.loading-track{width:100%;height:8px;background:#e5e7eb;border-radius:999px;overflow:hidden}.loading-track div{height:100%;background:#2563eb;transition:width .3s ease}@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Dashboard UX refresh */
+.dashboard-top-actions{display:flex;justify-content:flex-end;margin-bottom:14px}
+.panel-title-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}.panel-title-row h2{margin:0}.panel-title-row small{color:var(--muted)}
+.quick-action-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.quick-action{display:flex;gap:12px;align-items:center;padding:16px;border:1px solid var(--line);border-radius:16px;text-decoration:none;color:inherit;background:#fff;transition:.15s}
+.quick-action:hover{border-color:#bfdbfe;transform:translateY(-1px)}
+.quick-action span{width:38px;height:38px;border-radius:12px;background:var(--primary-soft);display:grid;place-items:center;color:var(--primary)}
+.quick-action b,.quick-action small{display:block}.quick-action small{font-size:12px;color:var(--muted);margin-top:3px}
+.workflow-modern{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.workflow-modern div{padding:16px;border-radius:14px;background:var(--surface-soft);border:1px solid var(--line)}.workflow-modern svg{color:var(--primary);margin-bottom:12px}.workflow-modern b,.workflow-modern span{display:block}.workflow-modern span{font-size:12px;color:var(--muted);margin-top:5px}
+@media(max-width:900px){.quick-action-grid,.workflow-modern{grid-template-columns:1fr 1fr}}
+@media(max-width:680px){.quick-action-grid,.workflow-modern{grid-template-columns:1fr}.panel-title-row{display:block}.panel-title-row small{display:block;margin-top:5px}}
