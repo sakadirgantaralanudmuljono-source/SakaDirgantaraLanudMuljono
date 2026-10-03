@@ -1,9 +1,11 @@
 import { useRef, useState, useEffect } from 'react';
-import { CalendarDays, MapPin, UserRound, Pencil, RefreshCcw, ShieldCheck, UsersRound, Trash2 } from 'lucide-react';
+import { CalendarDays, Pencil, RefreshCcw, ShieldCheck, UsersRound, Trash2 } from 'lucide-react';
 import { useToast } from '../../components/common/ToastProvider';
 import LoadingOverlay from '../../components/common/LoadingOverlay';
 import PageHeader from '../../components/common/PageHeader';
 import DataTable from '../../components/common/DataTable';
+import MobileDataCard from '../../components/common/MobileDataCard';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
 import CrudModal from '../../components/common/CrudModal';
 import { moduleService } from '../../services/module.service';
 import { step2Service } from '../../services/step2.service';
@@ -33,8 +35,10 @@ export default function Page() {
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
   const [pdfUrl, setPdfUrl] = useState('');
+  const [confirmState, setConfirmState] = useState(null);
   const acting = useRef(false);
   useEffect(()=>{ if(msg) showToast(msg, msg.toLowerCase().includes('gagal') ? 'error' : 'success'); },[msg]);
+  const askConfirm = (message, action) => setConfirmState({message, action});
   const uses = data?.inventarisKegiatan || [];
   const docs = data?.dokumentasi || [];
   const report = data?.laporan || {};
@@ -181,7 +185,7 @@ export default function Page() {
       <button className="btn small" onClick={() => { setEditing(r); setModal('inv'); }}>Edit</button>
       <label className="btn small">Foto Awal<input hidden type="file" accept="image/*" onChange={e => invPhoto(r, 'Awal', e.target.files?.[0])} /></label>
       <label className="btn small">Foto Setelah<input hidden type="file" accept="image/*" onChange={e => invPhoto(r, 'Setelah', e.target.files?.[0])} /></label>
-      <button className="btn small danger" onClick={() => confirm('Hapus pemakaian barang ini?') && act(() => step2Service.deleteActivityInventory(r.ID), 'Riwayat inventaris dihapus.')}>Hapus</button>
+      <button className="btn small danger" onClick={() => askConfirm('Hapus pemakaian barang ini?', () => act(() => step2Service.deleteActivityInventory(r.ID), 'Riwayat inventaris dihapus.'))}>Hapus</button>
     </div> }
   ];
   const docCols = [
@@ -192,7 +196,7 @@ export default function Page() {
     { key: '_', label: 'Aksi', render: (_, r) => <div className="row-actions">
       <button className="btn small" onClick={async () => { try { const x = await step2Service.previewDoc(r.ID); if (x?.dataUrl) window.open(x.dataUrl, '_blank'); } catch (e) { setMsg(e.message); } }}>Preview</button>
       <button className="btn small" onClick={() => { setEditing(r); setModal('doc'); }}>Edit</button>
-      <button className="btn small danger" onClick={() => confirm('Hapus dokumentasi ini?') && act(() => step2Service.deleteDoc(r.ID), 'Dokumentasi dihapus.')}>Hapus</button>
+      <button className="btn small danger" onClick={() => askConfirm('Hapus dokumentasi ini?', () => act(() => step2Service.deleteDoc(r.ID), 'Dokumentasi dihapus.'))}>Hapus</button>
     </div> }
   ];
   const sum = summary || {};
@@ -235,7 +239,7 @@ export default function Page() {
           <div className="row-actions">
             <button className="btn small" disabled={busy} onClick={() => copyLink('absen')}>Salin Link Absen</button>
             <button className="btn small" disabled={busy} onClick={() => copyLink('izin')}>Salin Link Izin</button>
-            <button className="btn small" disabled={busy} onClick={() => confirm('Tutup pengajuan izin kegiatan ini?') && act(() => operationsService.closeIzin(kid), 'Pengajuan izin ditutup.')}>Tutup Izin</button>
+            <button className="btn small" disabled={busy} onClick={() => askConfirm('Tutup pengajuan izin kegiatan ini?', () => act(() => operationsService.closeIzin(kid), 'Pengajuan izin ditutup.'))}>Tutup Izin</button>
           </div>
         </div>
         <div className="stat-grid compact-stats">
@@ -247,11 +251,11 @@ export default function Page() {
       </section>
       <section className="panel section-gap">
         <div className="toolbar toolbar-between"><h2>Pemakaian Inventaris</h2><button className="btn" onClick={() => { setEditing(null); setModal('inv'); }}>+ Catat Barang</button></div>
-        <DataTable columns={invCols} rows={uses} empty="Belum ada pemakaian inventaris." />
+        <DataTable columns={invCols} rows={uses} empty="Belum ada pemakaian inventaris." /><MobileDataCard columns={invCols} rows={uses} />
       </section>
       <section className="panel section-gap">
         <div className="toolbar toolbar-between"><h2>Dokumentasi</h2><label className="btn">+ Upload Foto<input hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={upload} /></label></div>
-        <DataTable columns={docCols} rows={docs} empty="Belum ada dokumentasi." />
+        <DataTable columns={docCols} rows={docs} empty="Belum ada dokumentasi." /><MobileDataCard columns={docCols} rows={docs} />
       </section>
       <section className="panel section-gap">
         <div className="toolbar toolbar-between">
@@ -264,7 +268,8 @@ export default function Page() {
         </div>
       </section>
     </>}
-    <LoadingOverlay open={busy} message="Memuat detail kegiatan" progress={70}/>
+    <LoadingOverlay open={busy} message="Memproses detail kegiatan" progress={70}/>
+    <ConfirmDialog open={!!confirmState} message={confirmState?.message} onCancel={()=>setConfirmState(null)} onConfirm={async()=>{const fn=confirmState?.action; setConfirmState(null); await fn?.();}} />
     <CrudModal open={modal === 'inv'} title={editing ? 'Edit Pemakaian Inventaris' : 'Catat Pemakaian Inventaris'} fields={invFields} initial={editing || { StatusPemakaian: 'Dipakai' }} saving={busy} onClose={() => { setModal(null); setEditing(null); }} onSave={async x => { try { await act(() => step2Service.saveActivityInventory(kid, x), 'Inventaris tersimpan.'); setModal(null); setEditing(null); } catch { /* pesan sudah diisi */ } }} />
     <CrudModal open={modal === 'doc'} title="Edit Dokumentasi" fields={docFields} initial={editing || {}} saving={busy} onClose={() => { setModal(null); setEditing(null); }} onSave={async x => { try { await act(() => step2Service.updateDoc(editing.ID, x), 'Dokumentasi diperbarui.'); setModal(null); setEditing(null); } catch { /* pesan sudah diisi */ } }} />
     <CrudModal open={modal === 'report'} title="Laporan Kegiatan" fields={reportFields} initial={{ ...report, TanggalLaporan: report.TanggalLaporan || today() }} saving={busy} onClose={() => setModal(null)} onSave={async x => { try { await act(() => step2Service.saveReport(kid, x), 'Laporan tersimpan.'); setModal(null); } catch { /* pesan sudah diisi */ } }} />
