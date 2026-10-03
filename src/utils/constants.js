@@ -1,1 +1,47 @@
-export const NAV_ADMIN=[['dashboard','Dashboard'],['anggota','Anggota'],['kegiatan','Kegiatan'],['activity-details','Detail Kegiatan'],['absensi','Absensi'],['penilaian','Penilaian'],['kas','Kas Organisasi'],['inventaris','Inventaris'],['surat','Surat'],['pengurus','Struktur Pengurus'],['notifications','Action Center'],['permissions','Role Permission'],['users','Pengguna'],['maintenance','System Maintenance']];export const NAV_MEMBER=[['dashboard','Beranda'],['profil','Profil Saya'],['absensi','Absensi Saya'],['penilaian','Penilaian Saya']];
+export const NAV_ADMIN = [
+  { section: 'Operasional', items: [
+    ['dashboard', 'Dashboard'],
+    ['kegiatan', 'Kegiatan'],
+    ['activity-details', 'Detail Kegiatan'],
+    ['absensi', 'Absensi'],
+    ['notifications', 'Action Center']
+  ]},
+  { section: 'Data Organisasi', items: [
+    ['anggota', 'Anggota'],
+    ['penilaian', 'Penilaian'],
+    ['kas', 'Kas Organisasi'],
+    ['inventaris', 'Inventaris'],
+    ['surat', 'Surat'],
+    ['pengurus', 'Struktur Pengurus']
+  ]},
+  { section: 'Sistem', items: [
+    ['users', 'Pengguna'],
+    ['permissions', 'Role Permission'],
+    ['maintenance', 'System Maintenance']
+  ]}
+];
+
+export const NAV_MEMBER = [
+  { section: 'Menu Anggota', items: [
+    ['dashboard', 'Beranda'],
+    ['absensi', 'Absensi Saya'],
+    ['penilaian', 'Penilaian Saya'],
+    ['profil', 'Profil Saya']
+  ]}
+];
+
+export const ADMIN_ONLY = ['users', 'permissions', 'maintenance'];
+export const CORE_STAFF = ['dashboard', 'kegiatan', 'activity-details', 'absensi', 'notifications'];
+
+export const MODULE_BY_PATH = {
+  anggota: 'anggota',
+  kegiatan: 'kegiatan',
+  'activity-details': 'kegiatan',
+  absensi: 'absensi',
+  penilaian: 'penilaian',
+  kas: 'kas',
+  inventaris: 'inventaris',
+  surat: 'surat',
+  pengurus: 'pengurus',
+  notifications: 'absensi'
+};
