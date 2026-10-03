@@ -11,8 +11,8 @@ const formatMoney = (value) => value == null ? '—' : new Intl.NumberFormat('id
 export default function DashboardPage() {
   const { session } = useAuth();
   const role = String(session?.user?.Role || 'ANGGOTA').toUpperCase();
-  const { data, loading, error, reload } = useRemoteData(() => moduleService.dashboard(), []);
-  const { data: openActs } = useRemoteData(() => role === 'ANGGOTA' ? attendanceService.dashboardActivities().catch(() => []) : Promise.resolve([]), [role]);
+  const { data, loading, error, reload } = useRemoteData(() => moduleService.dashboard(true), []);
+  const { data: openActs,loading:activitiesLoading,error:activitiesError,reload:reloadActivities } = useRemoteData(() => role === 'ANGGOTA' ? attendanceService.dashboardActivities() : Promise.resolve([]), [role]);
 
   const member = data?.anggotaDashboard;
   const d = data?.dashboard;
@@ -26,14 +26,27 @@ export default function DashboardPage() {
     ? [['/absensi','Absensi','Catat kehadiran'],['/penilaian','Penilaian','Lihat hasil'],['/profil','Profil','Lihat data']]
     : [['/kegiatan','Kegiatan','Kelola agenda'],['/absensi','Absensi','Verifikasi kehadiran'],['/notifications','Approval','Tinjau permintaan'],['/activity-details','Laporan','Dokumentasi kegiatan']];
 
+  const workflow=data?.workflow;
+  const activityLink=(path,id)=>id ? `${path}?kegiatanId=${encodeURIComponent(id)}` : path;
+  const cards=role==='ANGGOTA' ? [
+    {title:'Pengajuan Saya',Icon:Bell,to:'/absensi',available:!!member,count:member?.izin?.filter(x=>['Menunggu Verifikasi','Terkirim'].includes(x.Status)).length,description:'Izin/sakit menunggu verifikasi'},
+    {title:'Absensi Terbuka',Icon:ClipboardCheck,to:'/absensi',available:!activitiesLoading&&!activitiesError,count:activities.filter(x=>x.absensiCanSubmit).length,description:'Kegiatan yang dapat Anda absen sekarang'},
+    {title:'Penilaian Saya',Icon:FileText,to:'/penilaian',available:!!member,count:member?.penilaian?.length,description:'Catatan penilaian pribadi'}
+  ] : [
+    {title:'Approval',Icon:Bell,to:'/notifications',...workflow?.approval,description:'Pengajuan izin/sakit menunggu verifikasi'},
+    {title:'Absensi',Icon:ClipboardCheck,to:activityLink('/absensi',workflow?.attendance?.kegiatanId),...workflow?.attendance,description:'Kegiatan yang membuka absensi sekarang'},
+    {title:'Laporan',Icon:FileText,to:activityLink('/activity-details',workflow?.reports?.kegiatanId),...workflow?.reports,description:'Kegiatan berjalan/selesai tanpa PDF laporan'}
+  ];
+  async function refresh(){await Promise.all([reload(),reloadActivities()]);}
+
   return <>
     <PageHeader eyebrow="OPERATION CENTER" title={role === 'ANGGOTA' ? 'Beranda Anggota' : 'Dashboard Operasional'} description="Pusat aktivitas harian dan monitoring organisasi." />
 
     <div className="dashboard-top-actions">
-      <button className="btn" onClick={reload}>Refresh Data</button>
+      <button className="btn" onClick={refresh} disabled={loading||activitiesLoading}>Refresh Data</button>
     </div>
 
-    {error && <div className="alert">{error}</div>}
+    {(error||activitiesError) && <div className="alert">{error||activitiesError}</div>}
 
     <div className="stat-grid modern-stat-grid">
       {stats.map(([title,value,Icon]) => <article className="stat-card modern-card" key={title}>
@@ -51,11 +64,12 @@ export default function DashboardPage() {
     </section>}
 
     <section className="panel section-gap workflow-panel">
-      <div className="panel-title-row"><h2>Workflow Monitor</h2><small>Status proses utama</small></div>
+      <div className="panel-title-row"><h2>Workflow Monitor</h2><small>Jumlah pekerjaan saat data dimuat. Klik kartu untuk menindaklanjuti.</small></div>
       <div className="workflow-modern">
-        <div><Bell/><b>Approval</b><span>Menunggu tindakan</span></div>
-        <div><ClipboardCheck/><b>Absensi</b><span>Monitoring hari ini</span></div>
-        <div><FileText/><b>Laporan</b><span>Dokumen kegiatan</span></div>
+        {cards.map(({title,Icon,to,available,count,description})=>{
+          const content=<><Icon/><b>{title}</b><strong>{loading?'…':available?count??'—':'—'}</strong><span>{available?description:available===false?'Akses terbatas':loading?'Memuat ringkasan...':'Data belum tersedia'}</span>{available&&<small>Buka {title.toLowerCase()} →</small>}</>;
+          return available ? <Link key={title} className="workflow-card" to={to} aria-label={`${title}: ${count??0}. ${description}`}>{content}</Link> : <div key={title} className="workflow-card unavailable">{content}</div>;
+        })}
       </div>
     </section>
 
