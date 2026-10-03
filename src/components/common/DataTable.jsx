@@ -1,3 +1,4 @@
+import React from "react";
 import { useState } from 'react';
 
 export default function DataTable({ columns = [], rows = [], empty = 'Belum ada data.', searchable = false, pageSize = 0 }) {
