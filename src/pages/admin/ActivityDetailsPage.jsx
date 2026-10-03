@@ -1,4 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
+import {useNavigate,useSearchParams} from 'react-router-dom';
+import {crudService} from '../../services/crud.service';
 import { CalendarDays, Pencil, RefreshCcw, ShieldCheck, UsersRound, Trash2 } from 'lucide-react';
 import { useToast } from '../../components/common/ToastProvider';
 import LoadingOverlay from '../../components/common/LoadingOverlay';
@@ -22,9 +24,12 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 export default function Page() {
   const { showToast } = useToast();
-  const { data: acts } = useRemoteData(() => moduleService.activities(), []);
-  const { data: inventory } = useRemoteData(() => moduleService.inventory(), []);
-  const [kid, setKid] = useState('');
+  const navigate=useNavigate();
+  const [params]=useSearchParams();
+  const { data: acts,error:actsError } = useRemoteData(() => moduleService.activities(), []);
+  const { data: inventory,error:inventoryError } = useRemoteData(() => moduleService.inventory(), []);
+  const [kid, setKid] = useState(params.get('kegiatanId')||'');
+  useEffect(()=>{const id=params.get('kegiatanId');if(id){setKid(id);load(id)}},[params]);
   const [activitySearch, setActivitySearch] = useState('');
   const [activityMonth, setActivityMonth] = useState('');
   const [activityPeriod, setActivityPeriod] = useState('');
@@ -35,6 +40,7 @@ export default function Page() {
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
   const [pdfUrl, setPdfUrl] = useState('');
+  const [preview,setPreview]=useState(null);
   const [confirmState, setConfirmState] = useState(null);
   const acting = useRef(false);
   useEffect(()=>{ if(msg) showToast(msg, msg.toLowerCase().includes('gagal') ? 'error' : 'success'); },[msg]);
@@ -149,8 +155,11 @@ export default function Page() {
   }
 
   const invFields = [
-    { key: 'InventarisID', label: 'Barang', type: 'select', required: true, options: (inventory || []).map(x => ({ value: x.ID, label: `${x.NamaBarang} (tersedia ${x.Tersedia ?? x.Jumlah ?? 0})` })) },
+    { key: 'InventarisID', label: 'Barang', type: 'select', required: true, options: (data?.katalogInventaris || inventory || []).map(x => ({ value: x.ID, label: `${x.NamaBarang} (tersedia ${x.Tersedia ?? x.Jumlah ?? 0})` })) },
     { key: 'JumlahDipakai', label: 'Jumlah Dipakai', type: 'number', min: '1', required: true },
+    { key: 'JumlahSetelah', label: 'Jumlah Kembali', type:'number', min:'0' },
+    { key: 'JumlahRusakKembali', label: 'Jumlah Rusak Kembali', type:'number', min:'0' },
+    { key: 'KondisiSetelah', label:'Kondisi Setelah', type:'select', options:['Baik','Rusak Ringan','Rusak Berat','Hilang'] },
     { key: 'StatusPemakaian', label: 'Status', type: 'select', options: ['Dipakai', 'Selesai'] },
     { key: 'Keterangan', label: 'Keterangan', type: 'textarea', full: true }
   ];
@@ -179,7 +188,7 @@ export default function Page() {
   const invCols = [
     { key: 'NamaBarang', label: 'Barang' },
     { key: 'JumlahDipakai', label: 'Dipakai' },
-    { key: 'JumlahKembali', label: 'Kembali' },
+    { key: 'JumlahSetelah', label: 'Kembali' },
     { key: 'StatusPemakaian', label: 'Status' },
     { key: '_', label: 'Aksi', render: (_, r) => <div className="row-actions">
       <button className="btn small" onClick={() => { setEditing(r); setModal('inv'); }}>Edit</button>
@@ -194,7 +203,7 @@ export default function Page() {
     { key: 'Uploader', label: 'Uploader' },
     { key: 'Urutan', label: 'Urutan' },
     { key: '_', label: 'Aksi', render: (_, r) => <div className="row-actions">
-      <button className="btn small" onClick={async () => { try { const x = await step2Service.previewDoc(r.ID); if (x?.dataUrl) window.open(x.dataUrl, '_blank'); } catch (e) { setMsg(e.message); } }}>Preview</button>
+      <button className="btn small" onClick={async () => { try { const x = await step2Service.previewDoc(r.ID); if(x?.dataUrl)setPreview(x); } catch (e) { setMsg(e.message); } }}>Preview</button>
       <button className="btn small" onClick={() => { setEditing(r); setModal('doc'); }}>Edit</button>
       <button className="btn small danger" onClick={() => askConfirm('Hapus dokumentasi ini?', () => act(() => step2Service.deleteDoc(r.ID), 'Dokumentasi dihapus.'))}>Hapus</button>
     </div> }
@@ -220,6 +229,7 @@ export default function Page() {
        </div>
       
     </section>
+    {(msg||actsError||inventoryError) && <div className="alert" role="status">{msg||actsError||inventoryError}</div>}
     {kid && <>
       <section className="panel activity-detail-hero">
         <div>
@@ -227,10 +237,10 @@ export default function Page() {
           <p className="muted"><CalendarDays size={15}/> {(acts||[]).find(x=>String(x.ID)===String(kid))?.Tanggal || '-'} &nbsp; | &nbsp; <RefreshCcw size={15}/> Detail operasional</p>
         </div>
         <div className="quick-actions">
-          <button className="btn small"><Pencil size={16}/> Edit</button>
-          <button className="btn small"><ShieldCheck size={16}/> Izin</button>
-          <button className="btn small"><UsersRound size={16}/> Absen</button>
-          <button className="btn small danger"><Trash2 size={16}/> Hapus</button>
+          <button className="btn small" onClick={()=>navigate(`/kegiatan?kegiatanId=${encodeURIComponent(kid)}`)}><Pencil size={16}/> Edit</button>
+          <button className="btn small" onClick={()=>navigate(`/absensi?kegiatanId=${encodeURIComponent(kid)}`)}><ShieldCheck size={16}/> Izin</button>
+          <button className="btn small" onClick={()=>navigate(`/absensi?kegiatanId=${encodeURIComponent(kid)}`)}><UsersRound size={16}/> Absen</button>
+          <button className="btn small danger" disabled={busy} onClick={()=>askConfirm("Hapus kegiatan ini?",async()=>{try{await crudService.remove("kegiatan",kid);navigate("/kegiatan")}catch(e){setMsg(e.message)}})}><Trash2 size={16}/> Hapus</button>
         </div>
       </section>
       <section className="panel section-gap">
@@ -268,8 +278,9 @@ export default function Page() {
         </div>
       </section>
     </>}
+    {preview&&<div className="modal-backdrop"><div className="crud-modal" role="dialog" aria-modal="true" aria-label="Preview dokumentasi"><div className="modal-head"><h2>{preview.name||"Dokumentasi"}</h2><button className="btn" onClick={()=>setPreview(null)}>Tutup</button></div><img src={preview.dataUrl} alt={preview.name||"Dokumentasi kegiatan"} style={{maxWidth:"100%",maxHeight:"65vh"}}/></div></div>}
     <LoadingOverlay open={busy} message="Memproses detail kegiatan" progress={70}/>
-    <ConfirmDialog open={!!confirmState} message={confirmState?.message} onCancel={()=>setConfirmState(null)} onConfirm={async()=>{const fn=confirmState?.action; setConfirmState(null); await fn?.();}} />
+    <ConfirmDialog open={!!confirmState} message={confirmState?.message} onCancel={()=>setConfirmState(null)} onConfirm={async()=>{const fn=confirmState?.action; setConfirmState(null); try{await fn?.();}catch{/* pesan diisi oleh aksi */}}} />
     <CrudModal open={modal === 'inv'} title={editing ? 'Edit Pemakaian Inventaris' : 'Catat Pemakaian Inventaris'} fields={invFields} initial={editing || { StatusPemakaian: 'Dipakai' }} saving={busy} onClose={() => { setModal(null); setEditing(null); }} onSave={async x => { try { await act(() => step2Service.saveActivityInventory(kid, x), 'Inventaris tersimpan.'); setModal(null); setEditing(null); } catch { /* pesan sudah diisi */ } }} />
     <CrudModal open={modal === 'doc'} title="Edit Dokumentasi" fields={docFields} initial={editing || {}} saving={busy} onClose={() => { setModal(null); setEditing(null); }} onSave={async x => { try { await act(() => step2Service.updateDoc(editing.ID, x), 'Dokumentasi diperbarui.'); setModal(null); setEditing(null); } catch { /* pesan sudah diisi */ } }} />
     <CrudModal open={modal === 'report'} title="Laporan Kegiatan" fields={reportFields} initial={{ ...report, TanggalLaporan: report.TanggalLaporan || today() }} saving={busy} onClose={() => setModal(null)} onSave={async x => { try { await act(() => step2Service.saveReport(kid, x), 'Laporan tersimpan.'); setModal(null); } catch { /* pesan sudah diisi */ } }} />

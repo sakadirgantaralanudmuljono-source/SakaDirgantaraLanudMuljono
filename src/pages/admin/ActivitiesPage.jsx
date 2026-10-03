@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {useSearchParams,useNavigate} from 'react-router-dom';
 import PageHeader from '../../components/common/PageHeader';
 import DataTable from '../../components/common/DataTable';
 import CrudModal from '../../components/common/CrudModal';
@@ -25,6 +26,9 @@ const fields = [
 ];
 
 export default function Page() {
+  const [params]=useSearchParams();
+  const navigate=useNavigate();
+  const openedId=useRef('');
   const { data, loading, error, reload } = useRemoteData(() => moduleService.activities(), []);
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -32,6 +36,8 @@ export default function Page() {
   const [sheet, setSheet] = useState(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
+  useEffect(() => { if (active) setActive((data || []).find(x => x.ID === active.ID) || null); }, [data]);
+  useEffect(()=>{const id=params.get('kegiatanId');if(id&&data&&openedId.current!==id){const row=data.find(x=>String(x.ID)===id);if(row){openedId.current=id;setActive(row);setEditing(row);if(!['Selesai','Dibatalkan'].includes(row.Status))setModal(true)}}},[params,data]);
 
   async function run(fn, success) {
     setBusy(true);
@@ -40,16 +46,18 @@ export default function Page() {
       await fn();
       await reload();
       if (success) setMsg(success);
+      return true;
     } catch (e) {
       setMsg(e.message);
+      return false;
     } finally {
       setBusy(false);
     }
   }
 
   async function save(x) {
-    await run(() => crudService.save('kegiatan', x), editing ? 'Kegiatan diperbarui.' : 'Kegiatan ditambahkan.');
-    setModal(false);
+    const saved = await run(() => crudService.save('kegiatan', x), editing ? 'Kegiatan diperbarui.' : 'Kegiatan ditambahkan.');
+    if (saved) { setModal(false); setEditing(null); }
   }
 
   async function del(r) {
@@ -122,14 +130,14 @@ export default function Page() {
       <div className="modal-actions"><button className="btn small danger" disabled={busy} onClick={() => del(active)}>Hapus Kegiatan</button></div>
     </section>}
     <ActionSheet open={!!sheet} title={sheet?.NamaKegiatan || 'Kelola Kegiatan'} onClose={() => setSheet(null)} items={[
-      {label:'Detail Kegiatan', icon:<FileText size={20}/>, onClick:()=>setActive(sheet)},
+      {label:'Detail Kegiatan', icon:<FileText size={20}/>, onClick:()=>navigate('/activity-details?kegiatanId='+encodeURIComponent(sheet.ID))},
       {label:'Edit Kegiatan', icon:<Pencil size={20}/>, onClick:()=>{setEditing(sheet);setModal(true);}},
-      {label:'Mulai / Ubah Status', icon:<RefreshCcw size={20}/>, onClick:()=>trans(sheet, 'Berjalan')},
+      ...(sheet?.Status==='Rencana'?[{label:'Mulai Kegiatan',icon:<RefreshCcw size={20}/>,onClick:()=>trans(sheet,'Berjalan')}]:sheet?.Status==='Berjalan'?[{label:'Selesaikan Kegiatan',icon:<RefreshCcw size={20}/>,onClick:()=>trans(sheet,'Selesai')}]:[]),
       {label:'Atur Izin', icon:<ShieldCheck size={20}/>, onClick:()=>rule(sheet)},
       {label:'Link Absensi', icon:<UsersRound size={20}/>, onClick:()=>copyLink('absen',sheet.ID)},
       {label:'Hapus Kegiatan', icon:<Trash2 size={20}/>, danger:true, onClick:()=>del(sheet)}
     ]}/>
     <LoadingOverlay open={busy} message="Memproses kegiatan" progress={75}/>
-    <CrudModal open={modal} title={editing ? 'Edit Kegiatan' : 'Tambah Kegiatan'} fields={fields} initial={editing || {}} saving={busy} onClose={() => setModal(false)} onSave={save} />
+    <CrudModal open={modal} title={editing ? 'Edit Kegiatan' : 'Tambah Kegiatan'} fields={fields} initial={editing || {AbsensiMulai:'00:00',AbsensiSelesai:'23:59',RadiusAktif:'Nonaktif'}} saving={busy} onClose={() => setModal(false)} onSave={save} />
   </>;
 }

@@ -43,6 +43,8 @@ export function AuthProvider({children}){
     return ()=>{active=false};
   },[]);
 
+  useEffect(()=>{const expired=()=>setSession(null);window.addEventListener('saka:session-expired',expired);return()=>window.removeEventListener('saka:session-expired',expired)},[]);
+
   async function logout(){
     try{ if(import.meta.env.VITE_USE_MOCK!=='true') await authService.logout(); }
     finally{

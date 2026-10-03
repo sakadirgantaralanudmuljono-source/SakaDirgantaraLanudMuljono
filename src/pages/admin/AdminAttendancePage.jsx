@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import {useSearchParams} from 'react-router-dom';
 import PageHeader from '../../components/common/PageHeader';
 import DataTable from '../../components/common/DataTable';
 import { moduleService } from '../../services/module.service';
@@ -7,10 +8,11 @@ import { step2Service } from '../../services/step2.service';
 import { useRemoteData } from '../../hooks/useRemoteData';
 
 export default function Page() {
+  const [params]=useSearchParams();
   const { data: members } = useRemoteData(() => moduleService.members(), []);
   const { data: acts } = useRemoteData(() => moduleService.activities(), []);
-  const { data: history } = useRemoteData(() => moduleService.attendance().catch(() => []), []);
-  const [kid, setKid] = useState('');
+  const { data: history, reload:reloadHistory,error:historyError,loading:historyLoading } = useRemoteData(() => moduleService.attendance(), []);
+  const [kid, setKid] = useState(params.get('kegiatanId')||'');
   const [rows, setRows] = useState([]);
   const [izin, setIzin] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -19,11 +21,13 @@ export default function Page() {
   const [msg, setMsg] = useState('');
 
   useEffect(() => {
-    setRows((members || []).filter(x => ['Aktif', 'Calon Anggota'].includes(x.Status)).map(x => ({ AnggotaID: x.ID, Nama: x.Nama, StatusKehadiran: 'Hadir', Catatan: '' })));
-  }, [members]);
+    const existing=new Map((history||[]).filter(x=>String(x.KegiatanID)===String(kid)).map(x=>[String(x.AnggotaID),x]));
+    setRows((members||[]).filter(x=>['Aktif','Calon Anggota'].includes(x.Status)).map(x=>{const old=existing.get(String(x.ID));return {AnggotaID:x.ID,Nama:x.Nama,StatusKehadiran:old?.StatusKehadiran||'Hadir',Catatan:old?.Catatan||''}}));
+  }, [members,history,kid]);
 
   async function loadIzin(id = kid) {
     if (!id) { setIzin([]); setSummary(null); return; }
+    setIzin([]);setSummary(null);setProof(null);
     setBusy(true);
     try {
       const [list, sum] = await Promise.all([
@@ -47,6 +51,7 @@ export default function Page() {
     setBusy(true);
     try {
       await operationsService.saveBatchAttendance(kid, rows.map(({ AnggotaID, StatusKehadiran, Catatan }) => ({ AnggotaID, StatusKehadiran, Catatan })));
+      await reloadHistory();
       setMsg('Absensi massal berhasil disimpan.');
     } catch (e) {
       setMsg(e.message);
@@ -65,7 +70,7 @@ export default function Page() {
     try {
       await operationsService.verifyPermission(x.ID, d, note);
       setMsg(`Pengajuan ${d.toLowerCase()}.`);
-      await loadIzin();
+      await loadIzin();await reloadHistory();
     } catch (e) {
       setMsg(e.message);
     } finally {
@@ -110,7 +115,7 @@ export default function Page() {
     <PageHeader eyebrow="KEHADIRAN" title="Absensi Massal & Izin" description="Pilih kegiatan, tinjau bukti izin, lalu simpan absensi massal." />
     <section className="panel">
       <label>Kegiatan <select value={kid} onChange={e => setKid(e.target.value)}><option value="">Pilih kegiatan...</option>{(acts || []).map(x => <option key={x.ID} value={x.ID}>{x.NamaKegiatan} — {x.Tanggal} ({x.Status})</option>)}</select></label>
-      {msg && <div className="alert">{msg}</div>}
+      {(msg||historyError) && <div className="alert">{msg||historyError}</div>}
       {kid && summary && <div className="detail-grid section-gap">
         <div><small>Total izin</small><b>{summary.total ?? summary.jumlah ?? '—'}</b></div>
         <div><small>Menunggu</small><b>{summary.menunggu ?? summary.pending ?? '—'}</b></div>
@@ -122,7 +127,7 @@ export default function Page() {
       {proof?.dataUrl && <div className="proof-preview section-gap">{String(proof.mimeType).startsWith('image/') ? <img src={proof.dataUrl} alt={proof.name || 'Bukti'} /> : <a className="btn" href={proof.dataUrl} target="_blank" rel="noreferrer">Buka {proof.name || 'bukti'}</a>}</div>}
       <h3>Absensi Massal</h3>
       <DataTable columns={ac} rows={kid ? rows : []} empty="Pilih kegiatan terlebih dahulu." />
-      <div className="modal-actions"><button className="btn primary" disabled={!kid || busy} onClick={save}>{busy ? 'Memproses...' : 'Simpan Absensi Massal'}</button></div>
+      <div className="modal-actions"><button className="btn primary" disabled={!kid || busy || historyLoading} onClick={save}>{busy ? 'Memproses...' : 'Simpan Absensi Massal'}</button></div>
       <h3>Riwayat Tercatat</h3>
       <DataTable columns={hc} rows={kid ? recorded : []} empty={kid ? 'Belum ada absensi tercatat untuk kegiatan ini.' : 'Pilih kegiatan.'} searchable pageSize={8} />
     </section>

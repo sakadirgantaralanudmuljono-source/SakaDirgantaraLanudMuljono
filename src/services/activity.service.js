@@ -12,6 +12,6 @@ export const activityService={
  deleteDocumentation:(id)=>apiRequest('activity.documentation.delete',{id}),
  attendanceLink:(kegiatanId)=>apiRequest('activity.attendanceLink',{kegiatanId}),
  permissionLink:(kegiatanId)=>apiRequest('activity.permissionLink',{kegiatanId}),
- permissionSummary:(kegiatanId)=>apiRequest('activity.permissionSummary',{kegiatanId}),
+ permissionSummary:async(kegiatanId)=>{const rows=await apiRequest('activity.permissionSummary',{kegiatanId});if(!Array.isArray(rows))return rows;return {total:rows.length,menunggu:rows.filter(x=>['Menunggu Verifikasi','Terkirim'].includes(x.Status)).length,disetujui:rows.filter(x=>x.Status==='Disetujui').length,ditolak:rows.filter(x=>x.Status==='Ditolak').length};},
  generateReportPdf:(kegiatanId)=>apiRequest('activity.report.pdf',{kegiatanId})
 };

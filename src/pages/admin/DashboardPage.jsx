@@ -23,7 +23,7 @@ export default function DashboardPage() {
     : [['Anggota Aktif', d?.anggotaAktif ?? '—', Users], ['Kegiatan Bulan Ini', d?.kegiatanBulanIni ?? '—', CalendarDays], ['Kehadiran', d?.tingkatKehadiranBulanIni == null ? '—' : d.tingkatKehadiranBulanIni + '%', ClipboardCheck], ['Saldo Kas', formatMoney(d?.saldo), Wallet]];
 
   const actions = role === 'ANGGOTA'
-    ? [['/absensi','Absensi','Catat kehadiran'],['/penilaian','Penilaian','Lihat hasil'],['/profil','Profil','Perbarui data']]
+    ? [['/absensi','Absensi','Catat kehadiran'],['/penilaian','Penilaian','Lihat hasil'],['/profil','Profil','Lihat data']]
     : [['/kegiatan','Kegiatan','Kelola agenda'],['/absensi','Absensi','Verifikasi kehadiran'],['/notifications','Approval','Tinjau permintaan'],['/activity-details','Laporan','Dokumentasi kegiatan']];
 
   return <>

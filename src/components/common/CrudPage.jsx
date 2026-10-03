@@ -9,7 +9,7 @@ import { useAuth } from '../../context/AuthContext';
 
 function allowed(flag, role) {
   if (role === 'ADMIN') return true;
-  if (flag == null) return true;
+  if (flag == null) return false;
   return String(flag).toUpperCase() === 'TRUE';
 }
 
@@ -31,8 +31,8 @@ export default function CrudPage({ eyebrow, title, description, module, loader, 
     key: '__actions',
     label: 'Aksi',
     render: (_, r) => <div className="row-actions">
-      {canEdit && <button className="btn small" onClick={() => { setEditing(r); setModal(true); }}>Edit</button>}
-      {canDelete && <button className="btn small danger" onClick={() => remove(r)}>Hapus</button>}
+      {canEdit && <button disabled={busy} className="btn small" onClick={() => { setEditing(r); setModal(true); }}>Edit</button>}
+      {canDelete && <button disabled={busy} className="btn small danger" onClick={() => remove(r)}>Hapus</button>}
       {!canEdit && !canDelete && <span className="muted">Hanya lihat</span>}
     </div>
   }];
@@ -73,7 +73,7 @@ export default function CrudPage({ eyebrow, title, description, module, loader, 
         <span>{loading ? 'Memuat...' : `${rows.length} data`}</span>
         <div className="row-actions">
           <button className="btn" onClick={reload}>Muat Ulang</button>
-          {canCreate && <button className="btn primary" onClick={() => { setEditing(null); setModal(true); }}>+ Tambah Data</button>}
+          {canCreate && <button disabled={busy} className="btn primary" onClick={() => { setEditing(null); setModal(true); }}>+ Tambah Data</button>}
         </div>
       </div>
       {(error || actionError) && <div className="alert">{error || actionError}</div>}

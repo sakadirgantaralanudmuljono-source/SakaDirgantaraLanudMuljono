@@ -32,8 +32,7 @@ export default function Page() {
 
   async function save() {
     try {
-      const rest = rows.filter(x => x.Role !== role);
-      await step2Service.savePermissions([...rest, ...shown]);
+      await step2Service.savePermissions(shown);
       setMsg('Permission berhasil disimpan untuk peran yang dipilih. Peran lain tetap dipertahankan.');
       await load();
     } catch (e) {

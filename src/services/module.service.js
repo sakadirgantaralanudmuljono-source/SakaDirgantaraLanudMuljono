@@ -18,6 +18,6 @@ export const moduleService={
   letters:async()=> (await modules('surat')).surat||[],
   structure:async()=> (await modules('pengurus')).pengurus||[],
   users:async()=> (await modules('users')).users||[],
-  profile:async()=> (await modules('anggota')).anggota?.[0]||null,
+  profile:async()=>{const {user}=await apiRequest('auth.me');if(!user?.AnggotaID)return user||null;const rows=(await modules('anggota')).anggota||[];return rows.find(x=>String(x.ID)===String(user.AnggotaID))||user;},
   systemStructure:()=>apiRequest('system.structure')
 };

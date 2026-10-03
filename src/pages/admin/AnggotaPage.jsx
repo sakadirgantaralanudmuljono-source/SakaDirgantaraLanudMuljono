@@ -3,7 +3,7 @@ import {moduleService} from '../../services/module.service';
 import {Users, UserPlus, Search} from 'lucide-react';
 
 const columns=[{key:"Nama",label:"Nama"},{key:"NTA",label:"NTA"},{key:"Status",label:"Status"},{key:"Krida",label:"Krida"}];
-const fields=[{"key":"Nama","label":"Nama","required":true},{"key":"JenisKelamin","label":"Jenis Kelamin","type":"select","options":["Laki-laki","Perempuan"]},{"key":"TempatLahir","label":"Tempat Lahir"},{"key":"TanggalLahir","label":"Tanggal Lahir","type":"date"},{"key":"NoHP","label":"No. HP"},{"key":"Krida","label":"Krida"},{"key":"Status","label":"Status","type":"select","options":["Calon Anggota","Aktif","Nonaktif","Alumni"],"required":true},{"key":"Alamat","label":"Alamat","type":"textarea","full":true}];
+const fields=[{"key":"Nama","label":"Nama","required":true},{"key":"JenisKelamin","label":"Jenis Kelamin","type":"select","options":["Laki-laki","Perempuan"]},{"key":"TempatLahir","label":"Tempat Lahir"},{"key":"TanggalLahir","label":"Tanggal Lahir","type":"date"},{"key":"Telepon","label":"No. HP"},{"key":"Krida","label":"Krida"},{"key":"Status","label":"Status","type":"select","options":["Calon Anggota","Aktif","Nonaktif","Alumni"],"required":true},{"key":"Alamat","label":"Alamat","type":"textarea","full":true}];
 
 export default function Page(){
  return <div className="module-page">

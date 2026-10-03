@@ -1,8 +1,12 @@
 import React from "react";
-import { useState } from 'react';
+import { useState,useEffect } from 'react';
+import {useSearchParams} from 'react-router-dom';
 
 export default function DataTable({ columns = [], rows = [], empty = 'Belum ada data.', searchable = false, pageSize = 0 }) {
-  const [query, setQuery] = useState('');
+  const [params]=useSearchParams();
+  const externalQuery=params.get('q')||'';
+  const [query, setQuery] = useState(searchable?externalQuery:'');
+  useEffect(()=>{if(searchable){setQuery(externalQuery);setPage(1)}},[externalQuery,searchable]);
   const [page, setPage] = useState(1);
   const needle = query.trim().toLowerCase();
   const filtered = !searchable || !needle ? rows : rows.filter(row => columns.some(col => String(row[col.key] ?? '').toLowerCase().includes(needle)));
