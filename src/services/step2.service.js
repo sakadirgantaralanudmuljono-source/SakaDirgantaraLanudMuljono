@@ -11,6 +11,7 @@ export const step2Service={
  ...activityService,
  ...assessmentStepService,
  ...permissionService,
+ permissions: permissionService.getPermissions,
  saveAssessment:assessmentStepService.saveEntry,
  saveComponent:assessmentStepService.saveComponent,
  deleteComponent:assessmentStepService.deleteComponent,
