@@ -76,3 +76,9 @@ Pastikan kegiatan uji membuka jendela izin/absensi dan akun memiliki hak akses y
 - Uji browser otomatis belum berhasil dijalankan karena browser uji tidak berhasil diunduh. Layout/interaksi browser dan koneksi GAS/Sheets/Drive langsung belum terverifikasi.
 - Peringatan bundle lebih dari 500 kB masih ada; bukan error build.
 - Tahap 2 (tombol sesuai permission), tahap 3 (pencarian/filter/pagination/status koneksi), dan pengujian integrasi deployment penuh belum dikerjakan dalam paket tahap 1 ini.
+
+
+## PRIORITAS 2A - Data Ownership Validation
+- Added GAS/DataOwnership.gs
+- Added ownership validation before gateway dispatch
+- Protected memberId, kegiatanId, permission ownership manipulation
