@@ -1,4 +1,5 @@
 import {createContext,useContext,useEffect,useMemo,useState} from 'react';
+import {clearApiCache} from '../services/api';
 import {authService} from '../services/auth.service';
 
 const C=createContext(null);
@@ -48,6 +49,7 @@ export function AuthProvider({children}){
   async function logout(){
     try{ if(import.meta.env.VITE_USE_MOCK!=='true') await authService.logout(); }
     finally{
+      clearApiCache();
       localStorage.removeItem('saka_session_token');
       setSession(null);
     }

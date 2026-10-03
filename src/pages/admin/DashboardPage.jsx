@@ -11,7 +11,7 @@ const formatMoney = (value) => value == null ? '—' : new Intl.NumberFormat('id
 export default function DashboardPage() {
   const { session } = useAuth();
   const role = String(session?.user?.Role || 'ANGGOTA').toUpperCase();
-  const { data, loading, error, reload } = useRemoteData(() => moduleService.dashboard(true), []);
+  const { data, loading, error, reload } = useRemoteData(() => moduleService.dashboard(), []);
   const { data: openActs,loading:activitiesLoading,error:activitiesError,reload:reloadActivities } = useRemoteData(() => role === 'ANGGOTA' ? attendanceService.dashboardActivities() : Promise.resolve([]), [role]);
 
   const member = data?.anggotaDashboard;
@@ -30,7 +30,7 @@ export default function DashboardPage() {
   const activityLink=(path,id)=>id ? `${path}?kegiatanId=${encodeURIComponent(id)}` : path;
   const cards=role==='ANGGOTA' ? [
     {title:'Pengajuan Saya',Icon:Bell,to:'/absensi',available:!!member,count:member?.izin?.filter(x=>['Menunggu Verifikasi','Terkirim'].includes(x.Status)).length,description:'Izin/sakit menunggu verifikasi'},
-    {title:'Absensi Terbuka',Icon:ClipboardCheck,to:'/absensi',available:!activitiesLoading&&!activitiesError,count:activities.filter(x=>x.absensiCanSubmit).length,description:'Kegiatan yang dapat Anda absen sekarang'},
+    {title:'Absensi Terbuka',Icon:ClipboardCheck,to:activityLink('/absensi',activities.find(x=>x.absensiCanSubmit)?.ID),available:!activitiesLoading&&!activitiesError,count:activities.filter(x=>x.absensiCanSubmit).length,description:'Kegiatan yang dapat Anda absen sekarang'},
     {title:'Penilaian Saya',Icon:FileText,to:'/penilaian',available:!!member,count:member?.penilaian?.length,description:'Catatan penilaian pribadi'}
   ] : [
     {title:'Approval',Icon:Bell,to:'/notifications',...workflow?.approval,description:'Pengajuan izin/sakit menunggu verifikasi'},
@@ -75,7 +75,7 @@ export default function DashboardPage() {
 
     {role === 'ANGGOTA' && <section className="panel section-gap">
       <h2>Kegiatan Terbuka</h2>
-      {activities.length === 0 ? <div className="empty compact">Tidak ada kegiatan terbuka.</div> : activities.map(k => <div className="permission-row" key={k.ID || k.NamaKegiatan}><div><strong>{k.NamaKegiatan || k.Nama}</strong><br/><small>{k.Tanggal || ''}</small></div><Link className="btn" to="/absensi">Buka</Link></div>)}
+      {activities.length === 0 ? <div className="empty compact">Tidak ada kegiatan terbuka.</div> : activities.map(k => <div className="permission-row" key={k.ID || k.NamaKegiatan}><div><strong>{k.NamaKegiatan || k.Nama}</strong><br/><small>{k.Tanggal || ''}</small></div><Link className="btn" to={activityLink('/absensi',k.ID)}>Buka</Link></div>)}
     </section>}
   </>;
 }

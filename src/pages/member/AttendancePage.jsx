@@ -1,13 +1,17 @@
 import {useEffect,useRef,useState} from 'react';
+import {useSearchParams} from 'react-router-dom';
+import {invalidateApiCache} from '../../services/api';
 import {MapPin,CheckCircle2,CalendarDays,RefreshCw} from 'lucide-react';
 import {getCurrentLocation} from '../../hooks/useGeolocation';
 import {attendanceService} from '../../services/attendance.service';
 import PageHeader from '../../components/common/PageHeader';
 
 export default function AttendancePage(){
+  const [params]=useSearchParams();
+  const requestedId=params.get('kegiatanId')||'';
   const [activities,setActivities]=useState([]);
   const [permissionActivities,setPermissionActivities]=useState([]);
-  const [selected,setSelected]=useState('');
+  const [selected,setSelected]=useState(requestedId);
   const [status,setStatus]=useState('idle');
   const [message,setMessage]=useState('Pilih kegiatan yang sedang membuka absensi.');
 
@@ -21,19 +25,20 @@ export default function AttendancePage(){
   const [successText,setSuccessText]=useState('');
   const submitting=useRef(false);
 
-  async function load({preserveResult=false}={}){
+  async function load({preserveResult=false,force=false}={}){
+    if(force)invalidateApiCache();
     if(!preserveResult){setStatus('loading');setSuccessText('')}
     setRefreshWarning('');
     try{
       const rows=await attendanceService.activeActivities();
       setActivities(Array.isArray(rows)?rows:[]);
       try{const pr=await attendanceService.permissionActivities();setPermissionActivities(Array.isArray(pr)?pr:[])}catch(_){setPermissionActivities([]);setRefreshWarning('Daftar izin belum dapat dimuat. Silakan muat ulang.')}
-      setSelected(previous=>rows?.some(x=>String(x.ID)===previous)?previous:rows?.length===1?String(rows[0].ID):'');
+      setSelected(previous=>rows?.some(x=>String(x.ID)===requestedId)?requestedId:rows?.some(x=>String(x.ID)===previous)?previous:rows?.length===1?String(rows[0].ID):'');
       if(!preserveResult){setMessage(rows?.length?'Pilih kegiatan lalu lakukan absensi.':'Saat ini tidak ada kegiatan yang membuka absensi.');
       setStatus('idle');}
     }catch(e){if(preserveResult)setRefreshWarning('Data berhasil dikirim, tetapi daftar belum diperbarui: '+e.message);else{setStatus('error');setMessage(e.message)}}
   }
-  useEffect(()=>{load()},[]);
+  useEffect(()=>{const update=()=>{if(!submitting.current)load()};window.addEventListener('saka:data-updated',update);load();return()=>window.removeEventListener('saka:data-updated',update)},[requestedId]);
 
 
   function openPermission(k){
@@ -88,7 +93,7 @@ export default function AttendancePage(){
       </label>
       <p role="status" aria-live="polite">{message}</p>{refreshWarning&&<div className="alert" role="alert">{refreshWarning}</div>}
       <div className="attendance-actions">
-        <button className="btn" onClick={()=>load()} disabled={status==='loading'}><RefreshCw size={17}/> Muat Ulang</button>
+        <button className="btn" onClick={()=>load({force:true})} disabled={status==='loading'}><RefreshCw size={17}/> Muat Ulang</button>
         <button className="btn primary" onClick={attend} disabled={status==='loading'||!selected}>
           <CalendarDays size={17}/>{status==='loading'?' Memproses...':' Absen Sekarang'}
         </button>

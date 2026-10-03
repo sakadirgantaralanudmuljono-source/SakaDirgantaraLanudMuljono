@@ -16,6 +16,8 @@ export default function AppLayout(){
  const [open,setOpen]=useState(false);
  const [menuQuery,setMenuQuery]=useState('');
  const [visible,setVisible]=useState(null);
+ const [online,setOnline]=useState(navigator.onLine);
+ useEffect(()=>{const update=()=>setOnline(navigator.onLine);window.addEventListener('online',update);window.addEventListener('offline',update);return()=>{window.removeEventListener('online',update);window.removeEventListener('offline',update)}},[]);
  const [apiState,setApiState]=useState('memeriksa');
  const role=String(session?.user?.Role||session?.role||'ANGGOTA').toUpperCase();
  const page=location.pathname.replace(/^\//,'')||'dashboard';
@@ -34,7 +36,7 @@ export default function AppLayout(){
    <header className="topbar">
     <button className="mobile-menu" onClick={()=>setOpen(!open)}><Menu/></button>
     <div className="topbar-title"><small>SAKA DIRGANTARA</small><b>{TITLES[page]||'Sistem Informasi Organisasi'}</b></div><GlobalSearch groups={groups} />
-    <div className="topbar-actions"><NavLink className="icon-button" aria-label="Notifikasi" to={role==='ANGGOTA'?'/dashboard':'/notifications'}><Bell size={18}/></NavLink><span className={'system-chip '+apiState}><i/>{apiState==='terhubung'?'API aktif':apiState==='lokal'?'Mode lokal':'Memeriksa API'}</span></div>
+    <div className="topbar-actions"><NavLink className="icon-button" aria-label="Notifikasi" to={role==='ANGGOTA'?'/dashboard':'/notifications'}><Bell size={18}/></NavLink><span className={'system-chip '+apiState}><i/>{!online?'Offline · cache':apiState==='terhubung'?'API aktif':apiState==='lokal'?'Mode lokal':'Memeriksa API'}</span></div>
    </header>
    <section className="content"><Outlet/></section>
   </main>
