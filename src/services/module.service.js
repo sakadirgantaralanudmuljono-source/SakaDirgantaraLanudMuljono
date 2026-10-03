@@ -11,6 +11,7 @@ export const moduleService={
   modules,
   members:async()=> (await modules('anggota')).anggota||[],
   activities:async()=> (await modules('kegiatan')).kegiatan||[],
+  activitiesPaged:(params={})=>apiRequest('activity.list',params),
   attendance:async()=> (await modules('absensi')).absensi||[],
   cash:async()=> (await modules('kas')).kas||[],
   inventory:async()=> (await modules('inventaris')).inventaris||[],
