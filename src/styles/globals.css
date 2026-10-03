@@ -169,3 +169,29 @@ button,input,select,textarea{font:inherit}button{color:inherit}.app-shell{min-he
 
 .mobile-nav .mobile-logout{border:0;background:transparent;font-family:inherit;cursor:pointer;color:var(--danger);min-height:44px}
 .mobile-nav .mobile-logout:hover,.mobile-nav .mobile-logout:focus-visible{background:#fef2f2}
+
+/* Absensi Saya: sejajar pada desktop, bertumpuk pada layar kecil. */
+.member-attendance-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:20px;align-items:start}
+.member-attendance-grid>.panel{min-width:0;margin:0;padding:26px;max-width:none;text-align:left}
+.member-attendance-grid .attendance-card-heading{display:flex;align-items:center;gap:14px;margin-bottom:24px}
+.member-attendance-grid .location-icon{flex:0 0 48px;width:48px;height:48px;margin:0;border-radius:12px}
+.member-attendance-grid .attendance-card-heading h2{margin:0 0 5px;font-size:18px;line-height:1.35;letter-spacing:-.3px}
+.member-attendance-grid .attendance-card-heading p{margin:0;min-height:0;font-size:12px;line-height:1.5;color:var(--muted)}
+.member-attendance-grid .attendance-select{width:100%;font-size:12px;font-weight:650;gap:9px}
+.member-attendance-grid .attendance-select select{margin:0;min-width:0;min-height:44px;padding:11px 12px;font-size:13px;font-weight:400}
+.member-attendance-grid .attendance-select select:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.member-attendance-grid .attendance-status{min-height:0;margin:16px 0 24px;padding:13px 14px;background:var(--surface-soft);border:1px solid var(--line);border-radius:10px;font-size:12px;line-height:1.65;overflow-wrap:anywhere}
+.member-attendance-grid .attendance-status.error{background:#fef2f2;border-color:#fecaca;color:#b42318}
+.member-attendance-grid .attendance-status.success{background:#ecfdf3;border-color:#bbf7d0;color:#15803d}
+.member-attendance-grid .attendance-actions{justify-content:flex-end;gap:10px;padding-top:18px;border-top:1px solid var(--line)}
+.member-attendance-grid .attendance-actions .btn{min-height:44px}
+.member-attendance-grid .success-line{justify-content:flex-start;line-height:1.5}
+.member-attendance-grid .attendance-permission-note{margin:0 0 18px;font-size:12px;line-height:1.65;color:var(--muted)}
+.member-attendance-grid .empty.compact{padding:26px 18px;min-height:110px;display:grid;place-items:center;text-align:center;font-size:12px;line-height:1.65}
+.member-attendance-grid .permission-row{align-items:flex-start;gap:14px}
+.member-attendance-grid .permission-row>div{min-width:0;overflow-wrap:anywhere}
+.member-attendance-grid .permission-row strong{font-size:13px;line-height:1.6}
+.member-attendance-grid .permission-row small{font-size:11px;line-height:1.6;color:var(--muted)}
+.member-attendance-grid .permission-row>.btn{flex-shrink:0;min-height:40px}
+@media(max-width:1100px){.member-attendance-grid{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:600px){.member-attendance-grid{gap:16px}.member-attendance-grid>.panel{padding:20px}.member-attendance-grid .attendance-card-heading{gap:12px;margin-bottom:20px}.member-attendance-grid .attendance-card-heading h2{font-size:16px}.member-attendance-grid .attendance-actions{display:grid;grid-template-columns:1fr}.member-attendance-grid .attendance-actions .primary{grid-row:1}.member-attendance-grid .permission-row{flex-direction:column}.member-attendance-grid .permission-row>.btn{width:100%}}

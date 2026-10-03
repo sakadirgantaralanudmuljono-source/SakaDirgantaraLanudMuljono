@@ -82,16 +82,16 @@ export default function AttendancePage(){
   }
 
   return <><PageHeader eyebrow="KEHADIRAN" title="Absensi Saya" description="Kegiatan dan aturan radius dibaca langsung dari backend SAKA Dirgantara."/>
+    <div className="member-attendance-grid">
     <section className="panel attendance-panel">
-      <div className={'location-icon '+status}><MapPin/></div>
-      <h2>Absensi Kegiatan</h2>
+      <div className="attendance-card-heading"><div className={'location-icon '+status}><MapPin/></div><div><h2>Absensi Kegiatan</h2><p>Pilih kegiatan dan catat kehadiran Anda.</p></div></div>
       <label className="attendance-select">Kegiatan
         <select value={selected} onChange={e=>setSelected(e.target.value)} disabled={status==='loading'}>
           <option value="">Pilih kegiatan...</option>
           {activities.map(k=><option key={k.ID} value={k.ID}>{k.NamaKegiatan||k.Nama||k.ID} — {String(k.Tanggal||'').slice(0,10)}</option>)}
         </select>
       </label>
-      <p role="status" aria-live="polite">{message}</p>{refreshWarning&&<div className="alert" role="alert">{refreshWarning}</div>}
+      <p className={'attendance-status '+status} role="status" aria-live="polite">{message}</p>{refreshWarning&&<div className="alert" role="alert">{refreshWarning}</div>}
       <div className="attendance-actions">
         <button className="btn" onClick={()=>load({force:true})} disabled={status==='loading'}><RefreshCw size={17}/> Muat Ulang</button>
         <button className="btn primary" onClick={attend} disabled={status==='loading'||!selected}>
@@ -100,9 +100,10 @@ export default function AttendancePage(){
       </div>
       {status==='success'&&<div className="success-line"><CheckCircle2 size={18}/> {successText}</div>}
     </section>
-    <section className="panel"><h2>Pengajuan Izin / Sakit</h2><p>Daftar berikut hanya menampilkan kegiatan yang masih membuka pengajuan dan belum memiliki absensi/pengajuan Anda.</p>
+    <section className="panel attendance-permission-panel"><div className="attendance-card-heading"><div className="location-icon"><CalendarDays/></div><div><h2>Pengajuan Izin / Sakit</h2><p>Ajukan izin untuk kegiatan yang masih terbuka.</p></div></div><p className="attendance-permission-note">Kegiatan yang sudah memiliki absensi atau pengajuan Anda tidak ditampilkan.</p>
       {permissionActivities.length===0?<div className="empty compact">Tidak ada kegiatan yang membuka pengajuan izin.</div>:permissionActivities.map(k=><div className="permission-row" key={k.ID}><div><strong>{k.NamaKegiatan}</strong><br/><small>{String(k.Tanggal||'').slice(0,10)} · {k.message||''}</small></div><button className="btn" onClick={()=>openPermission(k)} disabled={status==='loading'}>Ajukan Izin</button></div>)}
     </section>
+    </div>
     {permission&&<div className="modal-backdrop"><div className="crud-modal" role="dialog" aria-modal="true" aria-labelledby="permission-title">
       <div className="modal-head"><h2 id="permission-title">Pengajuan Izin / Sakit</h2><button className="icon-btn" type="button" aria-label="Tutup" disabled={status==='loading'} onClick={()=>setPermission(null)}>×</button></div>
       <p>{permission.NamaKegiatan}</p>
