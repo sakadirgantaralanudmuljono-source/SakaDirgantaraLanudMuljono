@@ -1,4 +1,6 @@
-# SAKA Dirgantara — Web App
+# SAKA Dirgantara — Web App, Tahap 1
+
+Perubahan terbaru dan langkah pemasangan: baca `PANDUAN-TAHAP-1.md`. Catatan perapian di bawah menjelaskan paket dasar Clean.
 
 Frontend React + Vite dan proxy API Vercel. Kode aplikasi aktif berada di `src/`.
 
