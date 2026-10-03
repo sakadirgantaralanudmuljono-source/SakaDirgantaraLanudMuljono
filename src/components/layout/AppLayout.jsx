@@ -28,7 +28,7 @@ export default function AppLayout(){
    <div className="brand"><span className="brand-mark"><Plane size={21}/></span><div><b>SAKA Dirgantara</b><small>Management System</small></div></div>
    <div className="sidebar-search"><Search size={15}/><input aria-label="Cari menu" value={menuQuery} onChange={e=>setMenuQuery(e.target.value)} placeholder="Cari menu..."/></div>
    <nav>{groups.map(group=><div key={group.section}><div className="nav-caption">{group.section.toUpperCase()}</div>{group.items.filter(([path,label])=>`${path} ${label}`.toLowerCase().includes(menuQuery.toLowerCase())).map(([path,label])=>{const Icon=ICONS[path]||ChevronRight;return <NavLink key={path} to={'/'+path} onClick={()=>setOpen(false)}><Icon size={18}/><span>{label}</span></NavLink>})}</div>)}</nav>
-   <div className="sidebar-user"><span className="user-avatar">{String(name).trim().charAt(0).toUpperCase()}</span><div className="user-copy"><b>{name}</b><small>{role}</small></div><button onClick={logout}><LogOut size={18}/></button></div>
+   <div className="sidebar-user"><span className="user-avatar">{String(name).trim().charAt(0).toUpperCase()}</span><div className="user-copy"><b>{name}</b><small>{role}</small></div><button type="button" aria-label="Logout" title="Logout" onClick={logout}><LogOut size={18}/></button></div>
   </aside>
   <main className="main">
    <header className="topbar">
@@ -38,7 +38,7 @@ export default function AppLayout(){
    </header>
    <section className="content"><Outlet/></section>
   </main>
-  <nav className="mobile-nav"><NavLink to="/dashboard" end><LayoutDashboard size={18}/><span>Home</span></NavLink><NavLink to="/absensi"><ClipboardCheck size={18}/><span>Absensi</span></NavLink>{role!=='ANGGOTA'&&<NavLink to="/kegiatan"><CalendarDays size={18}/><span>Kegiatan</span></NavLink>}<NavLink to="/profil"><UserCog size={18}/><span>Profil</span></NavLink></nav>
+  <nav className="mobile-nav"><NavLink to="/dashboard" end><LayoutDashboard size={18}/><span>Home</span></NavLink><NavLink to="/absensi"><ClipboardCheck size={18}/><span>Absensi</span></NavLink>{role!=='ANGGOTA'&&<NavLink to="/kegiatan"><CalendarDays size={18}/><span>Kegiatan</span></NavLink>}<NavLink to="/profil"><UserCog size={18}/><span>Profil</span></NavLink><button type="button" className="mobile-logout" aria-label="Logout" onClick={logout}><LogOut size={18}/><span>Logout</span></button></nav>
   {open&&<button className="scrim" onClick={()=>setOpen(false)}/>} 
  </div>;
 }
