@@ -17,12 +17,12 @@ const fields = [
   { key: 'Jenis', label: 'Jenis', type: 'select', options: ['Latihan', 'Rapat', 'Pendidikan', 'Bakti Sosial', 'Kunjungan', 'Upacara', 'Lainnya'] },
   { key: 'Lokasi', label: 'Lokasi' },
   { key: 'PenanggungJawab', label: 'Penanggung Jawab' },
-  { key: 'AbsensiMulai', label: 'Absensi Mulai', type: 'time' },
-  { key: 'AbsensiSelesai', label: 'Absensi Selesai', type: 'time' },
+  { key: 'AbsensiMulai', label: 'Jam Buka Absensi (Hari H)', type: 'time' },
+  { key: 'AbsensiSelesai', label: 'Jam Tutup Absensi (Hari H)', type: 'time', help:'Absensi ditutup pada jam ini di tanggal kegiatan.' },
   { key: 'RadiusAktif', label: 'Pembatasan jarak', type: 'select', options: ['Aktif', 'Nonaktif'] },
-  { showWhen:form=>form.RadiusAktif==='Aktif', key: 'AbsensiLatitude', label: 'Titik lokasi: garis lintang', type: 'number', step: 'any' },
-  { showWhen:form=>form.RadiusAktif==='Aktif', key: 'AbsensiLongitude', label: 'Titik lokasi: garis bujur', type: 'number', step: 'any' },
-  { showWhen:form=>form.RadiusAktif==='Aktif', key: 'AbsensiRadiusMeter', label: 'Batas jarak (meter)', type: 'number', min: '1' }
+  { key: 'AbsensiLatitude', label: 'Titik lokasi: garis lintang', type: 'number', step: 'any' },
+  { key: 'AbsensiLongitude', label: 'Titik lokasi: garis bujur', type: 'number', step: 'any' },
+  { key: 'AbsensiRadiusMeter', label: 'Batas jarak (meter)', type: 'number', min: '10', max:'10000', help:'Isi titik lokasi dan jarak 10–10.000 meter jika pembatasan jarak diaktifkan.' }
 ];
 
 export default function Page() {
@@ -31,6 +31,8 @@ export default function Page() {
   const openedId=useRef('');
   const { data, loading, error, reload } = useRemoteData(() => moduleService.activities(), []);
   const {data:members}=useRemoteData(()=>moduleService.members(),[]);
+  const [tableReset,setTableReset]=useState(0);
+  const sortedActivities=useMemo(()=>(data||[]).map((row,index)=>({row,index})).sort((a,b)=>String(b.row.DibuatPada||'').localeCompare(String(a.row.DibuatPada||''))||b.index-a.index).map(item=>item.row),[data]);
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const [active, setActive] = useState(null);
@@ -58,7 +60,7 @@ export default function Page() {
 
   async function save(x) {
     const saved = await run(() => crudService.save('kegiatan', x), editing ? 'Kegiatan diperbarui.' : 'Kegiatan ditambahkan.');
-    if (saved) { setModal(false); setEditing(null); }
+    if (saved) { if(!editing)setTableReset(value=>value+1);setModal(false); setEditing(null); }
   }
 
   async function del(r) {
@@ -101,7 +103,7 @@ export default function Page() {
   }
 
   const participationLocked=!!editing?.ID&&editing.Status!=='Rencana';
-  const activityFields=[...fields.slice(0,3),{key:'Kategori',label:'Kategori kegiatan',type:'select',default:'Biasa',required:true,options:['Biasa','Daerah','Nasional','Khusus'],disabled:participationLocked,help:'Biasa untuk absensi umum. Kategori lainnya hanya untuk peserta yang ditunjuk.'},{key:'PesertaIDs',label:'Peserta yang ditunjuk',type:'members',full:true,showWhen:form=>form.Kategori&&form.Kategori!=='Biasa',disabled:participationLocked,options:(members||[]).filter(m=>['Aktif','Calon Anggota'].includes(m.Status)).map(m=>({value:String(m.ID),label:m.Nama+' · '+(m.NTA||'Belum ada NTA')}))},{key:'BonusPoin',label:'Bonus kehadiran (poin)',type:'number',min:0,max:100,step:'any',default:5,showWhen:form=>form.Kategori&&form.Kategori!=='Biasa',disabled:participationLocked,help:'Peserta yang hadir mendapat bonus. Yang tidak ditunjuk tidak dikenai pengurangan nilai. Nilai akhir maksimal 100.'}];
+  const activityFields=[...fields.slice(0,3),{key:'Kategori',label:'Kategori kegiatan',type:'select',default:'Biasa',required:true,options:['Biasa','Daerah','Nasional','Khusus'],disabled:participationLocked,help:'Biasa untuk absensi umum. Kategori lainnya hanya untuk peserta yang ditunjuk.'},...fields.slice(3),{key:'PesertaIDs',label:'Peserta yang ditunjuk',type:'members',full:true,showWhen:form=>form.Kategori&&form.Kategori!=='Biasa',disabled:participationLocked,options:(members||[]).filter(m=>['Aktif','Calon Anggota'].includes(m.Status)).map(m=>({value:String(m.ID),label:m.Nama+' · '+(m.NTA||'Belum ada NTA')}))},{key:'BonusPoin',label:'Bonus kehadiran (poin)',type:'number',min:0,max:100,step:'any',default:5,showWhen:form=>form.Kategori&&form.Kategori!=='Biasa',disabled:participationLocked,help:'Peserta yang hadir mendapat bonus. Yang tidak ditunjuk tidak dikenai pengurangan nilai. Nilai akhir maksimal 100.'}];
   const cols = useMemo(() => [
     { key: 'NamaKegiatan', label: 'Kegiatan' },
     {key:'Kategori',label:'Kategori',render:v=>v||'Biasa'},
@@ -118,7 +120,7 @@ export default function Page() {
         <button className="btn primary" onClick={() => { setEditing(null); setModal(true); }}>+ Tambah Kegiatan</button>
       </div>
       {(error || msg) && <div className="alert">{error || msg}</div>}
-      <DataTable columns={cols} rows={data || []} empty="Belum ada kegiatan." searchable pageSize={5} />
+      <DataTable columns={cols} rows={sortedActivities} empty="Belum ada kegiatan." searchable pageSize={5} resetKey={tableReset} />
     </section>
     {active && <section className="panel section-gap">
       <div className="toolbar toolbar-between">

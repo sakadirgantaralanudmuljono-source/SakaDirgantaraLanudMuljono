@@ -2,12 +2,13 @@ import React from "react";
 import { useState,useEffect } from 'react';
 import {useSearchParams} from 'react-router-dom';
 
-export default function DataTable({ columns = [], rows = [], empty = 'Belum ada data.', searchable = false, pageSize = 0 }) {
+export default function DataTable({ columns = [], rows = [], empty = 'Belum ada data.', searchable = false, pageSize = 0, resetKey = 0 }) {
   const [params]=useSearchParams();
   const externalQuery=params.get('q')||'';
   const [query, setQuery] = useState(searchable?externalQuery:'');
   useEffect(()=>{if(searchable){setQuery(externalQuery);setPage(1)}},[externalQuery,searchable]);
   const [page, setPage] = useState(1);
+  useEffect(()=>{if(resetKey>0){setPage(1);setQuery('')}},[resetKey]);
   const needle = query.trim().toLowerCase();
   const filtered = !searchable || !needle ? rows : rows.filter(row => columns.some(col => String(row[col.key] ?? '').toLowerCase().includes(needle)));
   const size = pageSize > 0 ? pageSize : filtered.length || 1;
