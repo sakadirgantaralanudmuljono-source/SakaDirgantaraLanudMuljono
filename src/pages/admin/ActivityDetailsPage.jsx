@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import LoadingOverlay from '../../components/common/LoadingOverlay';
 import PageHeader from '../../components/common/PageHeader';
 import DataTable from '../../components/common/DataTable';
 import CrudModal from '../../components/common/CrudModal';
@@ -203,8 +204,7 @@ export default function Page() {
         </select>
         <select value={activityPeriod} onChange={e=>setActivityPeriod(e.target.value)}>
           <option value="">Semua Periode</option>
-          <option value="2026">2026</option>
-          <option value="2025">2025</option>
+          {[...new Set((acts || []).map(x=>String(x.Periode || x.Tahun || '').trim()).filter(Boolean))].map(p=><option key={p} value={p}>{p}</option>)}
         </select>
         <select disabled={busy} value={kid} onChange={e => { setPdfUrl(''); setData(null); setSummary(null); setKid(e.target.value); load(e.target.value); }}>
           <option value="">Pilih kegiatan...</option>{filteredActivities.map(x => <option key={x.ID} value={x.ID}>{x.NamaKegiatan} — {x.Tanggal}</option>)}
@@ -248,6 +248,7 @@ export default function Page() {
         </div>
       </section>
     </>}
+    <LoadingOverlay open={busy} message="Memuat detail kegiatan" progress={70}/>
     <CrudModal open={modal === 'inv'} title={editing ? 'Edit Pemakaian Inventaris' : 'Catat Pemakaian Inventaris'} fields={invFields} initial={editing || { StatusPemakaian: 'Dipakai' }} saving={busy} onClose={() => { setModal(null); setEditing(null); }} onSave={async x => { try { await act(() => step2Service.saveActivityInventory(kid, x), 'Inventaris tersimpan.'); setModal(null); setEditing(null); } catch { /* pesan sudah diisi */ } }} />
     <CrudModal open={modal === 'doc'} title="Edit Dokumentasi" fields={docFields} initial={editing || {}} saving={busy} onClose={() => { setModal(null); setEditing(null); }} onSave={async x => { try { await act(() => step2Service.updateDoc(editing.ID, x), 'Dokumentasi diperbarui.'); setModal(null); setEditing(null); } catch { /* pesan sudah diisi */ } }} />
     <CrudModal open={modal === 'report'} title="Laporan Kegiatan" fields={reportFields} initial={{ ...report, TanggalLaporan: report.TanggalLaporan || today() }} saving={busy} onClose={() => setModal(null)} onSave={async x => { try { await act(() => step2Service.saveReport(kid, x), 'Laporan tersimpan.'); setModal(null); } catch { /* pesan sudah diisi */ } }} />

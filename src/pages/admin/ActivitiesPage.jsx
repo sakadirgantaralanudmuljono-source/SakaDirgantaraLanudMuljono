@@ -3,6 +3,8 @@ import PageHeader from '../../components/common/PageHeader';
 import DataTable from '../../components/common/DataTable';
 import CrudModal from '../../components/common/CrudModal';
 import ActionSheet from '../../components/common/ActionSheet';
+import LoadingOverlay from '../../components/common/LoadingOverlay';
+import { FileText, Pencil, RefreshCcw, ShieldCheck, UsersRound, Trash2 } from 'lucide-react';
 import { moduleService } from '../../services/module.service';
 import { crudService } from '../../services/crud.service';
 import { operationsService } from '../../services/operations.service';
@@ -120,13 +122,14 @@ export default function Page() {
       <div className="modal-actions"><button className="btn small danger" disabled={busy} onClick={() => del(active)}>Hapus Kegiatan</button></div>
     </section>}
     <ActionSheet open={!!sheet} title={sheet?.NamaKegiatan || 'Kelola Kegiatan'} onClose={() => setSheet(null)} items={[
-      {label:'Detail Kegiatan', icon:'📄', onClick:()=>setActive(sheet)},
-      {label:'Edit', icon:'✏️', onClick:()=>{setEditing(sheet);setModal(true);}},
-      {label:'Mulai / Ubah Status', icon:'🔄', onClick:()=>trans(sheet, 'Berjalan')},
-      {label:'Atur Izin', icon:'🔐', onClick:()=>rule(sheet)},
-      {label:'Link Absensi', icon:'👥', onClick:()=>copyLink('absen',sheet.ID)},
-      {label:'Hapus', icon:'🗑', danger:true, onClick:()=>del(sheet)}
+      {label:'Detail Kegiatan', icon:<FileText size={20}/>, onClick:()=>setActive(sheet)},
+      {label:'Edit Kegiatan', icon:<Pencil size={20}/>, onClick:()=>{setEditing(sheet);setModal(true);}},
+      {label:'Mulai / Ubah Status', icon:<RefreshCcw size={20}/>, onClick:()=>trans(sheet, 'Berjalan')},
+      {label:'Atur Izin', icon:<ShieldCheck size={20}/>, onClick:()=>rule(sheet)},
+      {label:'Link Absensi', icon:<UsersRound size={20}/>, onClick:()=>copyLink('absen',sheet.ID)},
+      {label:'Hapus Kegiatan', icon:<Trash2 size={20}/>, danger:true, onClick:()=>del(sheet)}
     ]}/>
+    <LoadingOverlay open={busy} message="Memproses kegiatan" progress={75}/>
     <CrudModal open={modal} title={editing ? 'Edit Kegiatan' : 'Tambah Kegiatan'} fields={fields} initial={editing || {}} saving={busy} onClose={() => setModal(false)} onSave={save} />
   </>;
 }
