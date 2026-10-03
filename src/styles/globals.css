@@ -139,3 +139,15 @@ button,input,select,textarea{font:inherit}button{color:inherit}.app-shell{min-he
 .module-summary b{display:block;margin-top:5px}
 .workflow-modern{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 @media(max-width:768px){.module-overview-grid,.workflow-modern{grid-template-columns:1fr}}
+
+/* UIUX V5 module experience */
+.module-hero{margin-bottom:16px;padding:22px}
+.module-hero-top{display:flex;justify-content:space-between;gap:20px;align-items:center}
+.module-hero h2{margin:0 0 6px;font-size:20px}.module-hero p{margin:0;color:var(--muted);font-size:13px}
+.module-stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:20px}
+.module-stat-grid>div{padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--surface-soft)}
+.module-stat-grid small,.module-stat-grid b{display:block}.module-stat-grid small{font-size:11px;color:var(--muted)}.module-stat-grid b{font-size:24px;margin-top:5px}
+.workflow-board{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.workflow-card{padding:16px;border-radius:14px;border:1px solid var(--line);background:#fff}.workflow-card small{color:var(--muted);display:block}.workflow-card b{display:block;font-size:18px;margin:8px 0}
+@media(max-width:800px){.module-hero-top{display:grid}.module-stat-grid,.workflow-board{grid-template-columns:1fr 1fr}}
+@media(max-width:500px){.module-stat-grid,.workflow-board{grid-template-columns:1fr}}
