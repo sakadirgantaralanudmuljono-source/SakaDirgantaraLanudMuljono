@@ -195,3 +195,7 @@ button,input,select,textarea{font:inherit}button{color:inherit}.app-shell{min-he
 .member-attendance-grid .permission-row>.btn{flex-shrink:0;min-height:40px}
 @media(max-width:1100px){.member-attendance-grid{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:600px){.member-attendance-grid{gap:16px}.member-attendance-grid>.panel{padding:20px}.member-attendance-grid .attendance-card-heading{gap:12px;margin-bottom:20px}.member-attendance-grid .attendance-card-heading h2{font-size:16px}.member-attendance-grid .attendance-actions{display:grid;grid-template-columns:1fr}.member-attendance-grid .attendance-actions .primary{grid-row:1}.member-attendance-grid .permission-row{flex-direction:column}.member-attendance-grid .permission-row>.btn{width:100%}}
+
+.participant-picker{display:flex;flex-direction:column;gap:8px;max-height:280px;overflow:auto;border:1px solid #e2e8f0;border-radius:12px;padding:12px}.participant-picker .participant-option{display:flex;flex-direction:row;align-items:center;gap:10px}.participant-picker input[type=checkbox]{width:18px;min-height:18px;flex:none}.participant-picker [hidden]{display:none}.attendance-single{display:flex;flex-direction:column;gap:8px;padding:16px;border-radius:12px;background:#f1f5f9}.attendance-single span,.attendance-single small{color:#475569}.attendance-radius{padding:12px 0;border-top:1px solid #e2e8f0}.attendance-radius p{font-size:14px;line-height:1.5}
+
+.form-grid .form-field{display:flex;flex-direction:column;gap:8px}.form-field>span{font-size:13px;font-weight:600}.form-field.full{grid-column:1/-1}

@@ -20,7 +20,7 @@ export default function Page() {
     try {
       const next = await maintenanceService.check();
       setReport(next);
-      setMsg('Pemeriksaan struktur selesai.');
+      setMsg('Pemeriksaan kelengkapan data selesai.');
       return next;
     } catch (e) {
       setMsg(e.message);
@@ -34,7 +34,7 @@ export default function Page() {
     const current = report || await check();
     if (!current) return;
     const cleanup = !!current.cleanupRequired;
-    if (cleanup && !confirm('Ditemukan sheet/kolom ekstra. Update Struktur akan MENGHAPUS elemen ekstra tersebut. Lanjutkan?')) return;
+    if (cleanup && !confirm('Ditemukan sheet/kolom ekstra. Lengkapi Kolom Data akan MENGHAPUS elemen ekstra tersebut. Lanjutkan?')) return;
     setBusy(true);
     try {
       const x = await maintenanceService.update(cleanup);
@@ -48,7 +48,7 @@ export default function Page() {
   }
 
   async function reset() {
-    if (!confirm('Reset sesi akan mengeluarkan SEMUA pengguna, termasuk akun ini. Data Spreadsheet tidak dihapus. Lanjutkan?')) return;
+    if (!confirm('Semua pengguna, termasuk Anda, akan keluar dan perlu masuk kembali. Data tetap tersimpan. Lanjutkan?')) return;
     setBusy(true);
     try {
       await maintenanceService.resetSessions();
@@ -78,7 +78,7 @@ export default function Page() {
       for (const name of order) {
         if (!book.SheetNames.includes(name)) continue;
         const headers=XLSX.utils.sheet_to_json(book.Sheets[name],{header:1})[0]||[];
-        if(name==='Users'&&headers.includes('PasswordHash'))throw new Error('Gunakan kolom Password untuk teks password. PasswordHash dihitung otomatis oleh backend.');
+        if(name==='Users'&&headers.includes('PasswordHash'))throw new Error('Isi kata sandi pada kolom Password. Kolom PasswordHash tidak perlu ditambahkan.');
         const rows = XLSX.utils.sheet_to_json(book.Sheets[name], { defval: '' });
         parsed[name] = rows.map((x, i) => ({ ...x, __rowNumber: (x.__rowNum__ ?? i + 1) + 1 }));
         total += rows.length;
@@ -100,43 +100,43 @@ export default function Page() {
       await maintenanceService.finishImport({ imported, failed });
       setProgress('');
       await check();
-      setMsg(`Import selesai: ${imported} berhasil, ${failed} gagal.`);
+      setMsg(`Impor selesai: ${imported} berhasil, ${failed} gagal.`);
     } catch (e) {
-      setMsg(`Import berhenti: ${e.message}. Batch yang sudah selesai tetap tersimpan.`);
+      setMsg(`Impor berhenti: ${e.message}. Data yang sudah berhasil diimpor tetap tersimpan.`);
     } finally {
       setBusy(false);
     }
   }
 
   const cols = [
-    { key: 'sheet', label: 'Sheet' },
-    { key: 'exists', label: 'Ada', render: v => v ? 'Ya' : 'Tidak' },
+    { key: 'sheet', label: 'Lembar Data' },
+    { key: 'exists', label: 'Tersedia', render: v => v ? 'Ya' : 'Tidak' },
     { key: 'rows', label: 'Baris' },
-    { key: 'missingHeaders', label: 'Header Kurang', render: v => (v || []).join(', ') || '—' },
-    { key: 'duplicateHeaders', label: 'Duplikat', render: v => (v || []).join(', ') || '—' },
+    { key: 'missingHeaders', label: 'Kolom Belum Ada', render: v => (v || []).join(', ') || '—' },
+    { key: 'duplicateHeaders', label: 'Kolom Ganda', render: v => (v || []).join(', ') || '—' },
     { key: 'ok', label: 'Status', render: v => v ? 'OK' : 'Perlu Perbaikan' }
   ];
 
   return <>
-    <PageHeader eyebrow="SISTEM" title="System Maintenance" description="Khusus ADMIN: cek struktur, perbarui struktur, impor Excel, lalu reset sesi bila diperlukan." />
+    <PageHeader eyebrow="SISTEM" title="Pengaturan Data" description="Periksa kelengkapan data, impor dari Excel, atau keluarkan semua pengguna jika diperlukan." />
     <section className="panel">
       <div className="toolbar">
         <div className="row-actions">
-          <button className="btn" disabled={busy} onClick={check}>Cek Struktur</button>
-          <button className="btn" disabled={busy} onClick={update}>Update Struktur</button>
+          <button className="btn" disabled={busy} onClick={check}>Periksa Kelengkapan Data</button>
+          <button className="btn" disabled={busy} onClick={update}>Lengkapi Kolom Data</button>
           <a className="btn" href="/templates/template_import_saka.xlsx" download>Unduh Template Excel</a>
-          <label className="btn" aria-disabled={busy}>Import Excel<input hidden disabled={busy} type="file" accept=".xlsx,.xls" onChange={importExcel} /></label>
+          <label className="btn" aria-disabled={busy}>Impor Excel<input hidden disabled={busy} type="file" accept=".xlsx,.xls" onChange={importExcel} /></label>
         </div>
-        <button className="btn danger" disabled={busy} onClick={reset}>Reset Semua Sesi</button>
+        <button className="btn danger" disabled={busy} onClick={reset}>Keluarkan Semua Pengguna</button>
       </div>
-      <p className="muted">Isi sheet Anggota dan Users untuk impor anggota beserta akun secara massal. Hubungkan melalui NTA yang sama atau AnggotaID. Password minimal 8 karakter ditulis pada kolom Password dan di-hash otomatis oleh backend. Kosongkan Password saat memperbarui akun untuk mempertahankan password lama. Lihat sheet Petunjuk dan Contoh pada template.</p>
+      <p className="muted">Isi sheet Anggota dan Users untuk impor anggota beserta akun secara massal. Hubungkan melalui NTA yang sama atau AnggotaID. Isi kata sandi minimal 8 karakter pada kolom Password. Aplikasi menyimpannya dalam bentuk terlindungi. Kosongkan Password saat memperbarui akun untuk mempertahankan password lama. Lihat sheet Petunjuk dan Contoh pada template.</p>
       {progress && <div className="alert">{progress}</div>}
       {msg && <pre className="system-result">{msg}</pre>}
       {importErrors.length>0&&<DataTable columns={[{key:'sheet',label:'Sheet'},{key:'row',label:'Baris Excel'},{key:'message',label:'Penyebab gagal'}]} rows={importErrors}/>}
       {report && <>
         {report.automation&&<div className={report.automation.active?'success-line':'alert'}>{report.automation.message}</div>}
         <DataTable columns={cols} rows={report.sheets || []} empty="Tidak ada laporan struktur." />
-        {report.extraSheets?.length > 0 && <div className="alert">Sheet ekstra: {report.extraSheets.join(', ')}</div>}
+        {report.extraSheets?.length > 0 && <div className="alert">Lembar tambahan: {report.extraSheets.join(', ')}</div>}
       </>}
     </section>
   </>;

@@ -19,10 +19,10 @@ const fields = [
   { key: 'PenanggungJawab', label: 'Penanggung Jawab' },
   { key: 'AbsensiMulai', label: 'Absensi Mulai', type: 'time' },
   { key: 'AbsensiSelesai', label: 'Absensi Selesai', type: 'time' },
-  { key: 'RadiusAktif', label: 'Radius', type: 'select', options: ['Aktif', 'Nonaktif'] },
-  { key: 'AbsensiLatitude', label: 'Latitude', type: 'number', step: 'any' },
-  { key: 'AbsensiLongitude', label: 'Longitude', type: 'number', step: 'any' },
-  { key: 'AbsensiRadiusMeter', label: 'Radius Meter', type: 'number', min: '1' }
+  { key: 'RadiusAktif', label: 'Pembatasan jarak', type: 'select', options: ['Aktif', 'Nonaktif'] },
+  { showWhen:form=>form.RadiusAktif==='Aktif', key: 'AbsensiLatitude', label: 'Titik lokasi: garis lintang', type: 'number', step: 'any' },
+  { showWhen:form=>form.RadiusAktif==='Aktif', key: 'AbsensiLongitude', label: 'Titik lokasi: garis bujur', type: 'number', step: 'any' },
+  { showWhen:form=>form.RadiusAktif==='Aktif', key: 'AbsensiRadiusMeter', label: 'Batas jarak (meter)', type: 'number', min: '1' }
 ];
 
 export default function Page() {
@@ -30,6 +30,7 @@ export default function Page() {
   const navigate=useNavigate();
   const openedId=useRef('');
   const { data, loading, error, reload } = useRemoteData(() => moduleService.activities(), []);
+  const {data:members}=useRemoteData(()=>moduleService.members(),[]);
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const [active, setActive] = useState(null);
@@ -86,7 +87,7 @@ export default function Page() {
     try {
       const x = kind === 'absen' ? await operationsService.attendanceLink(id) : await operationsService.permissionLink(id);
       const url = x?.url || x?.link;
-      if (!url) throw new Error('Tautan belum tersedia dari backend.');
+      if (!url) throw new Error('Tautan belum tersedia. Coba lagi nanti.');
       await navigator.clipboard.writeText(url);
       setMsg(kind === 'absen' ? 'Tautan absensi disalin.' : 'Tautan pengajuan izin disalin.');
     } catch (e) {
@@ -99,15 +100,18 @@ export default function Page() {
     await run(() => operationsService.closeIzin(r.ID), 'Pengajuan izin ditutup.');
   }
 
+  const participationLocked=!!editing?.ID&&editing.Status!=='Rencana';
+  const activityFields=[...fields.slice(0,3),{key:'Kategori',label:'Kategori kegiatan',type:'select',default:'Biasa',required:true,options:['Biasa','Daerah','Nasional','Khusus'],disabled:participationLocked,help:'Biasa untuk absensi umum. Kategori lainnya hanya untuk peserta yang ditunjuk.'},{key:'PesertaIDs',label:'Peserta yang ditunjuk',type:'members',full:true,showWhen:form=>form.Kategori&&form.Kategori!=='Biasa',disabled:participationLocked,options:(members||[]).filter(m=>['Aktif','Calon Anggota'].includes(m.Status)).map(m=>({value:String(m.ID),label:m.Nama+' · '+(m.NTA||'Belum ada NTA')}))},{key:'BonusPoin',label:'Bonus kehadiran (poin)',type:'number',min:0,max:100,step:'any',default:5,showWhen:form=>form.Kategori&&form.Kategori!=='Biasa',disabled:participationLocked,help:'Peserta yang hadir mendapat bonus. Yang tidak ditunjuk tidak dikenai pengurangan nilai. Nilai akhir maksimal 100.'}];
   const cols = useMemo(() => [
     { key: 'NamaKegiatan', label: 'Kegiatan' },
+    {key:'Kategori',label:'Kategori',render:v=>v||'Biasa'},
     { key: 'Tanggal', label: 'Tanggal' },
     { key: 'Status', label: 'Status' },
     { key: '__', label: 'Aksi', render: (_, r) => <button className="btn small" onClick={() => setSheet(r)}>⋮</button> }
   ], []);
 
   return <>
-    <PageHeader eyebrow="KEGIATAN" title="Kegiatan" description="Alur kerja: buat kegiatan, buka absensi, atur izin, lalu lanjut ke detail laporan." />
+    <PageHeader eyebrow="KEGIATAN" title="Kegiatan" description="Atur jadwal, pilih kategori dan peserta, lalu catat kehadiran serta laporan kegiatan." />
     <section className="panel">
       <div className="toolbar toolbar-between">
         <span>{loading ? 'Memuat...' : `${(data || []).length} kegiatan`}</span>
@@ -123,9 +127,9 @@ export default function Page() {
       </div>
       <div className="workflow">
         <div><small>1. Data</small><div className="row-actions"><button className="btn small" onClick={() => { setEditing(active); setModal(true); }}>Edit Kegiatan</button></div></div>
-        <div><small>2. Status operasional</small><div className="row-actions">{active.Status === 'Rencana' && <button className="btn small" disabled={busy} onClick={() => trans(active, 'Berjalan')}>Mulai</button>}{active.Status === 'Berjalan' && <button className="btn small" disabled={busy} onClick={() => trans(active, 'Selesai')}>Selesai</button>}{!['Selesai', 'Dibatalkan'].includes(active.Status) && <button className="btn small" disabled={busy} onClick={() => trans(active, 'Dibatalkan')}>Batalkan</button>}</div></div>
-        <div><small>3. Izin anggota</small><div className="row-actions"><button className="btn small" disabled={busy} onClick={() => rule(active)}>Atur Izin</button><button className="btn small" disabled={busy} onClick={() => closeIzin(active)}>Tutup Izin</button><button className="btn small" disabled={busy} onClick={() => copyLink('izin', active.ID)}>Salin Link Izin</button></div></div>
-        <div><small>4. Absensi</small><div className="row-actions"><button className="btn small" disabled={busy} onClick={() => copyLink('absen', active.ID)}>Salin Link Absen</button></div></div>
+        <div><small>2. Pelaksanaan</small><div className="row-actions">{active.Status === 'Rencana' && <button className="btn small" disabled={busy} onClick={() => trans(active, 'Berjalan')}>Mulai</button>}{active.Status === 'Berjalan' && <button className="btn small" disabled={busy} onClick={() => trans(active, 'Selesai')}>Selesai</button>}{!['Selesai', 'Dibatalkan'].includes(active.Status) && <button className="btn small" disabled={busy} onClick={() => trans(active, 'Dibatalkan')}>Batalkan</button>}</div></div>
+        <div><small>3. Izin anggota</small><div className="row-actions"><button className="btn small" disabled={busy} onClick={() => rule(active)}>Atur Izin</button><button className="btn small" disabled={busy} onClick={() => closeIzin(active)}>Tutup Izin</button><button className="btn small" disabled={busy} onClick={() => copyLink('izin', active.ID)}>Salin Tautan Izin</button></div></div>
+        <div><small>4. Absensi</small><div className="row-actions"><button className="btn small" disabled={busy} onClick={() => copyLink('absen', active.ID)}>Salin Tautan Absen</button></div></div>
       </div>
       <div className="modal-actions"><button className="btn small danger" disabled={busy} onClick={() => del(active)}>Hapus Kegiatan</button></div>
     </section>}
@@ -134,10 +138,10 @@ export default function Page() {
       {label:'Edit Kegiatan', icon:<Pencil size={20}/>, onClick:()=>{setEditing(sheet);setModal(true);}},
       ...(sheet?.Status==='Rencana'?[{label:'Mulai Kegiatan',icon:<RefreshCcw size={20}/>,onClick:()=>trans(sheet,'Berjalan')}]:sheet?.Status==='Berjalan'?[{label:'Selesaikan Kegiatan',icon:<RefreshCcw size={20}/>,onClick:()=>trans(sheet,'Selesai')}]:[]),
       {label:'Atur Izin', icon:<ShieldCheck size={20}/>, onClick:()=>rule(sheet)},
-      {label:'Link Absensi', icon:<UsersRound size={20}/>, onClick:()=>copyLink('absen',sheet.ID)},
+      {label:'Tautan Absensi', icon:<UsersRound size={20}/>, onClick:()=>copyLink('absen',sheet.ID)},
       {label:'Hapus Kegiatan', icon:<Trash2 size={20}/>, danger:true, onClick:()=>del(sheet)}
     ]}/>
     <LoadingOverlay open={busy} message="Memproses kegiatan" progress={75}/>
-    <CrudModal open={modal} title={editing ? 'Edit Kegiatan' : 'Tambah Kegiatan'} fields={fields} initial={editing || {AbsensiMulai:'00:00',AbsensiSelesai:'23:59',RadiusAktif:'Nonaktif'}} saving={busy} onClose={() => setModal(false)} onSave={save} />
+    <CrudModal open={modal} title={editing ? 'Edit Kegiatan' : 'Tambah Kegiatan'} fields={activityFields} initial={editing || {AbsensiMulai:'00:00',AbsensiSelesai:'23:59',RadiusAktif:'Nonaktif'}} saving={busy} onClose={() => setModal(false)} onSave={save} />
   </>;
 }

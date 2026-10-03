@@ -22,8 +22,11 @@ export default function Page() {
 
   useEffect(() => {
     const existing=new Map((history||[]).filter(x=>String(x.KegiatanID)===String(kid)).map(x=>[String(x.AnggotaID),x]));
-    setRows((members||[]).filter(x=>['Aktif','Calon Anggota'].includes(x.Status)).map(x=>{const old=existing.get(String(x.ID));return {AnggotaID:x.ID,Nama:x.Nama,StatusKehadiran:old?.StatusKehadiran||'Hadir',Catatan:old?.Catatan||''}}));
-  }, [members,history,kid]);
+    const activity=(acts||[]).find(k=>String(k.ID)===String(kid));
+    let assigned=[];try{assigned=JSON.parse(activity?.PesertaIDs||'[]')}catch{}
+    const restricted=activity?.Kategori&&activity.Kategori!=='Biasa';
+    setRows((members||[]).filter(x=>['Aktif','Calon Anggota'].includes(x.Status)&&(!restricted||assigned.includes(String(x.ID)))).map(x=>{const old=existing.get(String(x.ID));return {AnggotaID:x.ID,Nama:x.Nama,StatusKehadiran:old?.StatusKehadiran||'Hadir',Catatan:old?.Catatan||''}}));
+  }, [members,history,kid,acts]);
 
   async function loadIzin(id = kid) {
     if (!id) { setIzin([]); setSummary(null); return; }
@@ -86,6 +89,7 @@ export default function Page() {
     }
   }
 
+  useEffect(()=>{if(!kid){const open=(acts||[]).filter(k=>k.Status==='Berjalan');if(open.length===1)setKid(String(open[0].ID))}},[acts,kid]);
   const recorded = useMemo(() => (history || []).filter(x => !kid || String(x.KegiatanID || x.IDKegiatan || '') === String(kid)), [history, kid]);
   const ac = [
     { key: 'Nama', label: 'Anggota' },
@@ -127,7 +131,7 @@ export default function Page() {
       {proof?.dataUrl && <div className="proof-preview section-gap">{String(proof.mimeType).startsWith('image/') ? <img src={proof.dataUrl} alt={proof.name || 'Bukti'} /> : <a className="btn" href={proof.dataUrl} target="_blank" rel="noreferrer">Buka {proof.name || 'bukti'}</a>}</div>}
       <h3>Absensi Massal</h3>
       <DataTable columns={ac} rows={kid ? rows : []} empty="Pilih kegiatan terlebih dahulu." />
-      <div className="modal-actions"><button className="btn primary" disabled={!kid || busy || historyLoading} onClick={save}>{busy ? 'Memproses...' : 'Simpan Absensi Massal'}</button></div>
+      <div className="modal-actions"><button className="btn primary" disabled={!kid || !rows.length || busy || historyLoading} onClick={save}>{busy ? 'Memproses...' : 'Simpan Absensi Massal'}</button></div>
       <h3>Riwayat Tercatat</h3>
       <DataTable columns={hc} rows={kid ? recorded : []} empty={kid ? 'Belum ada absensi tercatat untuk kegiatan ini.' : 'Pilih kegiatan.'} searchable pageSize={8} />
     </section>

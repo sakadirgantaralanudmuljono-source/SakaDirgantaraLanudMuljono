@@ -23,6 +23,10 @@ export default function AttendancePage(){
   const [formError,setFormError]=useState('');
   const [refreshWarning,setRefreshWarning]=useState('');
   const [successText,setSuccessText]=useState('');
+  const [locationRule,setLocationRule]=useState(null);
+  const [radiusMessage,setRadiusMessage]=useState('');
+  const [checkingRadius,setCheckingRadius]=useState(false);
+  const radiusRequest=useRef(0);
   const submitting=useRef(false);
 
   async function load({preserveResult=false,force=false}={}){
@@ -34,12 +38,33 @@ export default function AttendancePage(){
       setActivities(Array.isArray(rows)?rows:[]);
       try{const pr=await attendanceService.permissionActivities();setPermissionActivities(Array.isArray(pr)?pr:[])}catch(_){setPermissionActivities([]);setRefreshWarning('Daftar izin belum dapat dimuat. Silakan muat ulang.')}
       setSelected(previous=>rows?.some(x=>String(x.ID)===requestedId)?requestedId:rows?.some(x=>String(x.ID)===previous)?previous:rows?.length===1?String(rows[0].ID):'');
-      if(!preserveResult){setMessage(rows?.length?'Pilih kegiatan lalu lakukan absensi.':'Saat ini tidak ada kegiatan yang membuka absensi.');
+      if(!preserveResult){setMessage(rows?.length===1?'Kegiatan siap. Tekan Absen Sekarang untuk mencatat kehadiran.':rows?.length?'Pilih kegiatan yang Anda ikuti, lalu tekan Absen Sekarang.':'Saat ini tidak ada kegiatan yang membuka absensi.');
       setStatus('idle');}
     }catch(e){if(preserveResult)setRefreshWarning('Data berhasil dikirim, tetapi daftar belum diperbarui: '+e.message);else{setStatus('error');setMessage(e.message)}}
   }
   useEffect(()=>{const update=()=>{if(!submitting.current)load()};window.addEventListener('saka:data-updated',update);load();return()=>window.removeEventListener('saka:data-updated',update)},[requestedId]);
 
+
+  useEffect(()=>{
+    let live=true;radiusRequest.current++;setRadiusMessage('');setLocationRule(null);
+    if(selected)attendanceService.locationRule(selected).then(rule=>{if(live)setLocationRule(rule)}).catch(e=>{if(live)setRadiusMessage(e.message)});
+    return()=>{live=false};
+  },[selected]);
+  async function checkRadius(){
+    const request=++radiusRequest.current;setCheckingRadius(true);setRadiusMessage('Mencari lokasi Anda...');
+    try{
+      const rule=await attendanceService.locationRule(selected);
+      if(request===radiusRequest.current)setLocationRule(rule);
+      if(!rule?.enabled){if(request===radiusRequest.current)setRadiusMessage('Kegiatan ini tidak membatasi jarak absensi.');return}
+      const position=await getCurrentLocation();
+      const rad=Math.PI/180;
+      const a=Math.sin((position.latitude-rule.latitude)*rad/2)**2+Math.cos(rule.latitude*rad)*Math.cos(position.latitude*rad)*Math.sin((position.longitude-rule.longitude)*rad/2)**2;
+      const distance=6371000*2*Math.atan2(Math.sqrt(Math.min(1,a)),Math.sqrt(Math.max(0,1-a)));
+      if(!Number.isFinite(distance))throw new Error('Jarak belum dapat diperiksa. Muat ulang aplikasi lalu coba lagi.');
+      const text=position.accuracy>Math.min(rule.radius,100)?'Lokasi belum cukup akurat. Aktifkan lokasi presisi dan coba di tempat terbuka.':distance<=rule.radius?`Anda sudah berada di area absensi. Jarak sekitar ${Math.round(distance)} meter; batas ${rule.radius} meter.`:`Anda belum masuk area absensi. Jarak sekitar ${Math.round(distance)} meter; batas ${rule.radius} meter.`;
+      if(request===radiusRequest.current)setRadiusMessage(text);
+    }catch(e){if(request===radiusRequest.current)setRadiusMessage(e.message)}finally{setCheckingRadius(false)}
+  }
 
   function openPermission(k){
     setPermission(k);setKind('Izin');setProofKind('Surat Izin');setReason('');setProof(null);setFormError('');
@@ -72,7 +97,7 @@ export default function AttendancePage(){
       if(rule?.enabled){
         setMessage(`Radius kegiatan ${rule.radius} m. Mengambil lokasi perangkat...`);
         position=await getCurrentLocation();
-        setMessage(`GPS ditemukan (akurasi ±${Math.round(position.accuracy)} m). Backend sedang memvalidasi radius...`);
+        setMessage(`Lokasi ditemukan (ketelitian ±${Math.round(position.accuracy)} m). Memeriksa jarak Anda...`);
       }
       const result=await attendanceService.submit(selected,position);
       const text=`Absensi berhasil dicatat${result?.StatusKehadiran?' sebagai '+result.StatusKehadiran:''}.`;
@@ -81,17 +106,18 @@ export default function AttendancePage(){
     }catch(e){setStatus('error');setMessage(e.message);}finally{submitting.current=false}
   }
 
-  return <><PageHeader eyebrow="KEHADIRAN" title="Absensi Saya" description="Kegiatan dan aturan radius dibaca langsung dari backend SAKA Dirgantara."/>
+  return <><PageHeader eyebrow="KEHADIRAN" title="Absensi Saya" description="Catat kehadiran Anda atau ajukan izin untuk kegiatan yang Anda ikuti."/>
     <div className="member-attendance-grid">
     <section className="panel attendance-panel">
-      <div className="attendance-card-heading"><div className={'location-icon '+status}><MapPin/></div><div><h2>Absensi Kegiatan</h2><p>Pilih kegiatan dan catat kehadiran Anda.</p></div></div>
-      <label className="attendance-select">Kegiatan
+      <div className="attendance-card-heading"><div className={'location-icon '+status}><MapPin/></div><div><h2>Absensi Kegiatan</h2><p>{activities.length===1?'Kegiatan Anda sudah dipilih. Catat kehadiran dengan tombol di bawah.':'Pilih kegiatan yang Anda ikuti dan catat kehadiran Anda.'}</p></div></div>
+      {activities.length===1?<div className="attendance-single"><strong>{activities[0].NamaKegiatan}</strong><span>{String(activities[0].Tanggal||'').slice(0,10)} · {activities[0].Lokasi||'Lokasi belum dicantumkan'}</span>{activities[0].Kategori&&activities[0].Kategori!=='Biasa'&&<small>Anda ditunjuk sebagai peserta kegiatan {activities[0].Kategori.toLowerCase()}.</small>}</div>:activities.length>1&&<label className="attendance-select">Kegiatan
         <select value={selected} onChange={e=>setSelected(e.target.value)} disabled={status==='loading'}>
           <option value="">Pilih kegiatan...</option>
           {activities.map(k=><option key={k.ID} value={k.ID}>{k.NamaKegiatan||k.Nama||k.ID} — {String(k.Tanggal||'').slice(0,10)}</option>)}
         </select>
-      </label>
+      </label>}
       <p className={'attendance-status '+status} role="status" aria-live="polite">{message}</p>{refreshWarning&&<div className="alert" role="alert">{refreshWarning}</div>}
+      {selected&&<div className="attendance-radius"><p>{locationRule?.enabled?`Absensi berlaku dalam jarak ${locationRule.radius} meter dari lokasi kegiatan.`:locationRule?'Kegiatan ini tidak membatasi jarak absensi.':'Memeriksa aturan lokasi...'}</p>{locationRule?.enabled&&<button className="btn" onClick={checkRadius} disabled={checkingRadius||status==='loading'}><MapPin size={17}/>{checkingRadius?'Mencari lokasi...':'Cek Jarak Saya'}</button>}{radiusMessage&&<p role="status" aria-live="polite">{radiusMessage}</p>}</div>}
       <div className="attendance-actions">
         <button className="btn" onClick={()=>load({force:true})} disabled={status==='loading'}><RefreshCw size={17}/> Muat Ulang</button>
         <button className="btn primary" onClick={attend} disabled={status==='loading'||!selected}>

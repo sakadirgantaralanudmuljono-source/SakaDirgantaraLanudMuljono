@@ -1,5 +1,5 @@
 const API_PATH = import.meta.env.VITE_API_PATH || '/api/gas';
-const STORAGE_KEY='saka_read_cache_v1';
+const STORAGE_KEY='saka_read_cache_v2';
 const READ_ACTIONS=new Set(['dashboard.get','permissions.get','modules.get','activity.list','member.activities.dashboard','member.activities.active','member.activities.permission','assessment.month','assessment.memberHistory','assessment.skk','activity.inventory.get','activity.report.get','activity.permissionSummary','permission.batch.get','notifications.get','notifications.permissionDetail','system.structure']);
 const TIMED_ACTIONS=new Set(['dashboard.get','member.activities.dashboard','member.activities.active','member.activities.permission','notifications.get']);
 let state={token:'',revision:null,entries:{}};
@@ -11,15 +11,21 @@ export function getApiCacheEpoch(){return epoch;}
 export function invalidateApiCache(){epoch++;state.entries={};pending.clear();checkedAt=0;persist();}
 export function clearApiCache(){invalidateApiCache();state={token:'',revision:null,entries:{}};try{sessionStorage.removeItem(STORAGE_KEY);}catch{}}
 function scope(token){if(state.token!==token){clearApiCache();state.token=token;}}
+export function readableMessage(message){
+ const text=String(message||'Permintaan belum berhasil. Silakan coba lagi.');
+ if(/ScriptApp|oauthScopes|script\.scriptapp|Required permissions|authorization is required/i.test(text))return 'Izin Google untuk fitur ini belum lengkap. Hubungi pemilik aplikasi agar mengaktifkannya sesuai petunjuk pemasangan.';
+ if(/GAS_API_URL|GAS_PROXY_SECRET|VERCEL_PROXY_SECRET|proxy secret|endpoint|API.*(not|belum|invalid)|function.*not defined/i.test(text))return 'Aplikasi belum tersambung dengan benar. Hubungi pemilik aplikasi untuk memeriksa pengaturannya.';
+ return text.replace(/backend/gi,'aplikasi');
+}
 export class ApiError extends Error {
   constructor(message, status = 500, details = null) {
-    super(message);this.name='ApiError';this.status=status;this.details=details;
+    super(readableMessage(message));this.name='ApiError';this.status=status;this.details=details;
   }
 }
 async function request(action,payload,token,options={}){
- const response=await fetch(API_PATH,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,token,payload}),signal:options.signal});
+ let response;try{response=await fetch(API_PATH,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,token,payload}),signal:options.signal});}catch(e){if(e.name==='AbortError')throw e;throw new ApiError('Koneksi terputus. Periksa internet Anda, lalu coba lagi.',0);}
  let data;
- try{data=await response.json();}catch{throw new ApiError('Respons server tidak valid.',response.status);}
+ try{data=await response.json();}catch{throw new ApiError('Data belum dapat dibaca. Muat ulang halaman dan coba lagi.',response.status);}
  if(!response.ok||data?.ok===false||data?.success===false){
   if(response.status===401||data?.error?.code==='SESSION_EXPIRED'){
    clearApiCache();localStorage.removeItem('saka_session_token');localStorage.removeItem('saka_session');window.dispatchEvent(new Event('saka:session-expired'));
@@ -67,7 +73,7 @@ export async function apiRequest(action,payload={},options={}){
    if(epoch===startEpoch&&state.token===token){state.entries[key]={value,time:Date.now()};persist();}
    return value;
   }catch(e){
-   if(item&&!(e instanceof ApiError)&&e.name!=='AbortError')return item.value;
+   if(item&&(!(e instanceof ApiError)||e.status===0)&&e.name!=='AbortError')return item.value;
    throw e;
   }finally{if(pending.get(key)===promise)pending.delete(key);}
  })();

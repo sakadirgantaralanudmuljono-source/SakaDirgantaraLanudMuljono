@@ -1,10 +1,10 @@
 export const NAV_ADMIN = [
   { section: 'Operasional', items: [
-    ['dashboard', 'Dashboard'],
+    ['dashboard', 'Beranda'],
     ['kegiatan', 'Kegiatan'],
     ['activity-details', 'Detail Kegiatan'],
     ['absensi', 'Absensi'],
-    ['notifications', 'Action Center']
+    ['notifications', 'Notifikasi & Pengajuan']
   ]},
   { section: 'Data Organisasi', items: [
     ['anggota', 'Anggota'],
@@ -14,10 +14,10 @@ export const NAV_ADMIN = [
     ['surat', 'Surat'],
     ['pengurus', 'Struktur Pengurus']
   ]},
-  { section: 'Sistem', items: [
+  { section: 'Pengaturan', items: [
     ['users', 'Pengguna'],
-    ['permissions', 'Role Permission'],
-    ['maintenance', 'System Maintenance']
+    ['permissions', 'Hak Akses'],
+    ['maintenance', 'Pengaturan Data']
   ]}
 ];
 

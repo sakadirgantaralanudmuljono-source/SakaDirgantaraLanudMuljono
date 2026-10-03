@@ -33,24 +33,24 @@ export default function Page() {
   async function save() {
     try {
       await step2Service.savePermissions(shown);
-      setMsg('Permission berhasil disimpan untuk peran yang dipilih. Peran lain tetap dipertahankan.');
+      setMsg('Hak akses untuk peran yang dipilih berhasil disimpan.');
       await load();
     } catch (e) {
       setMsg(e.message);
     }
   }
 
-  const cols = [{ key: 'Module', label: 'Modul' }, ...['CanView', 'CanCreate', 'CanEdit', 'CanDelete'].map(k => ({ key: k, label: k.replace('Can', ''), render: (_, r) => <input type="checkbox" checked={String(r[k]).toUpperCase() === 'TRUE'} onChange={() => toggle(r, k)} /> }))];
+  const cols = [{ key: 'Module', label: 'Modul' }, ...['CanView', 'CanCreate', 'CanEdit', 'CanDelete'].map(k => ({ key: k, label: ({CanView:'Lihat',CanCreate:'Tambah',CanEdit:'Ubah',CanDelete:'Hapus'})[k], render: (_, r) => <input type="checkbox" checked={String(r[k]).toUpperCase() === 'TRUE'} onChange={() => toggle(r, k)} /> }))];
 
   return <>
-    <PageHeader eyebrow="AKSES" title="Role Permission" description="Khusus ADMIN. Simpan hanya mengubah peran yang sedang dibuka. Backend tetap memvalidasi setiap operasi." />
+    <PageHeader eyebrow="AKSES" title="Hak Akses" description="Atur apa yang boleh dilihat dan dilakukan oleh pengurus atau anggota. Perubahan berlaku untuk peran yang dipilih." />
     <section className="panel">
       <div className="toolbar">
         <select value={role} onChange={e => setRole(e.target.value)}><option>PENGURUS</option><option>ANGGOTA</option></select>
-        <button className="btn primary" onClick={save}>Simpan Permission</button>
+        <button className="btn primary" onClick={save}>Simpan Hak Akses</button>
       </div>
       {msg && <div className="alert">{msg}</div>}
-      <DataTable columns={cols} rows={shown} empty="Memuat permission..." />
+      <DataTable columns={cols} rows={shown} empty="Memuat hak akses..." />
     </section>
   </>;
 }

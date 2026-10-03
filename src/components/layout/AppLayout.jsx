@@ -27,20 +27,20 @@ export default function AppLayout(){
  const groups=(role==='ANGGOTA'?NAV_MEMBER:NAV_ADMIN).map(g=>({...g,items:g.items.filter(([p])=>canSee(p,role,visible))})).filter(g=>g.items.length);
  return <div className="app-shell">
   <aside className={'sidebar '+(open?'open':'')}>
-   <div className="brand"><span className="brand-mark"><Plane size={21}/></span><div><b>SAKA Dirgantara</b><small>Management System</small></div></div>
+   <div className="brand"><span className="brand-mark"><Plane size={21}/></span><div><b>SAKA Dirgantara</b><small>Pengelolaan Organisasi</small></div></div>
    <div className="sidebar-search"><Search size={15}/><input aria-label="Cari menu" value={menuQuery} onChange={e=>setMenuQuery(e.target.value)} placeholder="Cari menu..."/></div>
    <nav>{groups.map(group=><div key={group.section}><div className="nav-caption">{group.section.toUpperCase()}</div>{group.items.filter(([path,label])=>`${path} ${label}`.toLowerCase().includes(menuQuery.toLowerCase())).map(([path,label])=>{const Icon=ICONS[path]||ChevronRight;return <NavLink key={path} to={'/'+path} onClick={()=>setOpen(false)}><Icon size={18}/><span>{label}</span></NavLink>})}</div>)}</nav>
-   <div className="sidebar-user"><span className="user-avatar">{String(name).trim().charAt(0).toUpperCase()}</span><div className="user-copy"><b>{name}</b><small>{role}</small></div><button type="button" aria-label="Logout" title="Logout" onClick={logout}><LogOut size={18}/></button></div>
+   <div className="sidebar-user"><span className="user-avatar">{String(name).trim().charAt(0).toUpperCase()}</span><div className="user-copy"><b>{name}</b><small>{role}</small></div><button type="button" aria-label="Keluar" title="Keluar" onClick={logout}><LogOut size={18}/></button></div>
   </aside>
   <main className="main">
    <header className="topbar">
     <button className="mobile-menu" onClick={()=>setOpen(!open)}><Menu/></button>
     <div className="topbar-title"><small>SAKA DIRGANTARA</small><b>{TITLES[page]||'Sistem Informasi Organisasi'}</b></div><GlobalSearch groups={groups} />
-    <div className="topbar-actions"><NavLink className="icon-button" aria-label="Notifikasi" to={role==='ANGGOTA'?'/dashboard':'/notifications'}><Bell size={18}/></NavLink><span className={'system-chip '+apiState}><i/>{!online?'Offline · cache':apiState==='terhubung'?'API aktif':apiState==='lokal'?'Mode lokal':'Memeriksa API'}</span></div>
+    <div className="topbar-actions"><NavLink className="icon-button" aria-label="Notifikasi" to={role==='ANGGOTA'?'/dashboard':'/notifications'}><Bell size={18}/></NavLink><span className={'system-chip '+apiState}><i/>{!online?'Tanpa internet · data tersimpan':apiState==='terhubung'?'Aplikasi siap':apiState==='lokal'?'Koneksi terganggu':'Memeriksa koneksi'}</span></div>
    </header>
    <section className="content"><Outlet/></section>
   </main>
-  <nav className="mobile-nav"><NavLink to="/dashboard" end><LayoutDashboard size={18}/><span>Home</span></NavLink><NavLink to="/absensi"><ClipboardCheck size={18}/><span>Absensi</span></NavLink>{role!=='ANGGOTA'&&<NavLink to="/kegiatan"><CalendarDays size={18}/><span>Kegiatan</span></NavLink>}<NavLink to="/profil"><UserCog size={18}/><span>Profil</span></NavLink><button type="button" className="mobile-logout" aria-label="Logout" onClick={logout}><LogOut size={18}/><span>Logout</span></button></nav>
+  <nav className="mobile-nav"><NavLink to="/dashboard" end><LayoutDashboard size={18}/><span>Beranda</span></NavLink><NavLink to="/absensi"><ClipboardCheck size={18}/><span>Absensi</span></NavLink>{role!=='ANGGOTA'&&<NavLink to="/kegiatan"><CalendarDays size={18}/><span>Kegiatan</span></NavLink>}<NavLink to="/profil"><UserCog size={18}/><span>Profil</span></NavLink><button type="button" className="mobile-logout" aria-label="Keluar" onClick={logout}><LogOut size={18}/><span>Keluar</span></button></nav>
   {open&&<button className="scrim" onClick={()=>setOpen(false)}/>} 
  </div>;
 }

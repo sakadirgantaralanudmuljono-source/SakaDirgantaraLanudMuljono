@@ -133,7 +133,7 @@ export default function Page() {
     try {
       const x = await act(() => step2Service.generateReportPdf(kid), 'PDF laporan berhasil dibuat.');
       const url = new URL(x?.url || '');
-      if (url.protocol !== 'https:') throw new Error('Tautan PDF dari backend tidak valid.');
+      if (url.protocol !== 'https:') throw new Error('Tautan laporan tidak dapat dibuka. Coba buat laporan kembali.');
       setPdfUrl(url.href);
       if (tab) tab.location.replace(url.href);
     } catch (e) {
@@ -247,8 +247,8 @@ export default function Page() {
         <div className="toolbar toolbar-between">
           <h2>Ringkasan Izin</h2>
           <div className="row-actions">
-            <button className="btn small" disabled={busy} onClick={() => copyLink('absen')}>Salin Link Absen</button>
-            <button className="btn small" disabled={busy} onClick={() => copyLink('izin')}>Salin Link Izin</button>
+            <button className="btn small" disabled={busy} onClick={() => copyLink('absen')}>Salin Tautan Absen</button>
+            <button className="btn small" disabled={busy} onClick={() => copyLink('izin')}>Salin Tautan Izin</button>
             <button className="btn small" disabled={busy} onClick={() => askConfirm('Tutup pengajuan izin kegiatan ini?', () => act(() => operationsService.closeIzin(kid), 'Pengajuan izin ditutup.'))}>Tutup Izin</button>
           </div>
         </div>
@@ -272,7 +272,7 @@ export default function Page() {
           <div><h2>Laporan Kegiatan</h2><span className="muted">{report?.PDFUrl ? 'PDF laporan sudah tersedia.' : 'Lengkapi laporan sebelum membuat PDF.'}</span></div>
           <div className="row-actions">
             <button className="btn" onClick={() => { setEditing(report); setModal('report'); }}>Isi / Edit Laporan</button>
-            <button className="btn primary" disabled={busy} onClick={pdf}>{busy ? 'Memproses...' : 'Generate PDF'}</button>
+            <button className="btn primary" disabled={busy} onClick={pdf}>{busy ? 'Memproses...' : 'Buat PDF'}</button>
             {(pdfUrl || report?.PDFUrl) && <a className="btn" href={pdfUrl || report.PDFUrl} target="_blank" rel="noopener noreferrer">Buka PDF</a>}
           </div>
         </div>

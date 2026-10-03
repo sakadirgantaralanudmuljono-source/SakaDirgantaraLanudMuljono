@@ -12,6 +12,6 @@ export default function Page(){
     <div className="module-summary"><UserPlus/><div><small>Aksi Cepat</small><b>Tambah Anggota Baru</b></div></div>
     <div className="module-summary"><Search/><div><small>Pencarian</small><b>Filter Data Cepat</b></div></div>
    </div>
-   <CrudPage eyebrow="DATA ANGGOTA" title="Anggota" description="Kelola profil anggota dengan pencarian, filter, dan histori data." module="anggota" loader={()=>moduleService.members()} columns={columns} fields={fields}/>
+   <CrudPage eyebrow="DATA ANGGOTA" title="Anggota" description="Tambah atau perbarui data anggota, lalu cari berdasarkan nama atau informasi keanggotaan." module="anggota" loader={()=>moduleService.members()} columns={columns} fields={fields}/>
  </div>
 }

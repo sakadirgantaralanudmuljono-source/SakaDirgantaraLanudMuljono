@@ -7,7 +7,7 @@ export default function LoadingOverlay({open, message='Memproses data', progress
       <LoaderCircle className="loading-icon spin" size={38}/>
       <h3>{message}</h3>
       <div className="progress-track"><span style={{width:`${progress}%`}} /></div>
-      <small>Mohon tunggu, sistem sedang menyelesaikan proses.</small>
+      <small>Mohon tunggu, data sedang diproses.</small>
     </div>
   </div>
 }
