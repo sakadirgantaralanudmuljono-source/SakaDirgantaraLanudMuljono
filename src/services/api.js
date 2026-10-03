@@ -22,7 +22,7 @@ export async function apiRequest(action, payload = {}, options = {}) {
   try { data = await response.json(); }
   catch { throw new ApiError('Respons server tidak valid.', response.status); }
 
-  if (!response.ok || data?.ok === false) {
+  if (!response.ok || data?.ok === false || data?.success === false) {
     if (response.status === 401) localStorage.removeItem('saka_session_token');
     throw new ApiError(data?.message || 'Permintaan gagal.', response.status, data);
   }
