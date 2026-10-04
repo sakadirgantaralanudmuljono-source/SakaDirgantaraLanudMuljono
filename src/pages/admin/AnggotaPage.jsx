@@ -18,7 +18,7 @@ const fields=[
 
 function generatePdf(rows){
  const statusOrder=['PENGURUS','AKTIF','NONAKTIF','CALON ANGGOTA','KELUAR'];
- const jabatanOrder=['Ketua','Wakil Ketua','Sekretaris','Bendahara','Pimpinan Krida'];
+ const jabatanOrder=['Ketua','Ketua Saka','Wakil Ketua','Sekretaris','Bendahara','Pimpinan Krida'];
  const excludeAktif=['Anggota Muda Dirgantara','Anggota Dewasa Dirgantara'];
  const sorted=(items)=>[...items].sort((a,b)=>{
    const ja=jabatanOrder.indexOf(a.Jabatan);
@@ -26,7 +26,6 @@ function generatePdf(rows){
    if(ja!==-1 || jb!==-1) return (ja===-1?99:ja)-(jb===-1?99:jb);
    return String(a.Nama||'').localeCompare(String(b.Nama||''));
  });
- const jabatanOrder=['Ketua','Ketua Saka','Wakil Ketua','Sekretaris','Bendahara','Pimpinan Krida'];
  const withJabatan=(x)=>x.Jabatan && x.Jabatan !== 'Anggota';
  const sortRows=(items)=>[...items].sort((a,b)=>{
    const ja=jabatanOrder.indexOf(a.Jabatan);
