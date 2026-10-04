@@ -13,7 +13,7 @@ function allowed(flag, role) {
   return String(flag).toUpperCase() === 'TRUE';
 }
 
-export default function CrudPage({ eyebrow, title, description, module, loader, columns, fields, normalize = x => x }) {
+export default function CrudPage({ eyebrow, title, description, module, loader, columns, fields, normalize = x => x, toolbarExtra = null }) {
   const { session } = useAuth();
   const role = String(session?.user?.Role || 'ANGGOTA').toUpperCase();
   const { data, loading, error, reload } = useRemoteData(loader, []);
@@ -73,6 +73,7 @@ export default function CrudPage({ eyebrow, title, description, module, loader, 
         <span>{loading ? 'Memuat...' : `${rows.length} data`}</span>
         <div className="row-actions">
           <button className="btn" onClick={reload}>Muat Ulang</button>
+          {toolbarExtra}
           {canCreate && <button disabled={busy} className="btn primary" onClick={() => { setEditing(null); setModal(true); }}>+ Tambah Data</button>}
         </div>
       </div>
