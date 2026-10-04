@@ -68,32 +68,34 @@ function generatePdf(rows){
 
 export default function Page(){
  const [rows,setRows]=useState([]);
- const [filterJabatan,setFilterJabatan]=useState('Semua');
- const [filterStatus,setFilterStatus]=useState('Semua');
- const jabatanFilter=[
-  'Pamong Saka Putra','Pamong Saka Putri','Ketua Dewan','Wakil Ketua Dewan',
-  'Sekretaris 1','Sekretaris 2','Bendahara','Instruktur'
+ const [filterKategori,setFilterKategori]=useState('Semua');
+ const excludedJabatan=[
+  'Anggota Dewasa Dirgantara',
+  'Anggota Muda Dirgantara',
+  'Calon Anggota Dirgantara'
  ];
- const filteredRows=rows.filter(x=>{
-  const jabatanMatch=filterJabatan==='Semua'||x.Jabatan===filterJabatan;
-  const statusMatch=filterStatus==='Semua'||x.Status===filterStatus;
-  return jabatanMatch && statusMatch;
- });
+ const jabatanPengurus=(row)=>{
+  return Boolean(row.Jabatan) && !excludedJabatan.includes(row.Jabatan);
+ };
+ const filterRows=(items)=>{
+  if(filterKategori==='Pengurus') return items.filter(jabatanPengurus);
+  if(filterKategori==='Aktif') return items.filter(x=>x.Status==='Aktif');
+  if(filterKategori==='Nonaktif') return items.filter(x=>x.Status==='Nonaktif');
+  if(filterKategori==='Keluar') return items.filter(x=>x.Status==='Keluar');
+  return items;
+ };
  useEffect(()=>{moduleService.members().then(setRows).catch(()=>setRows([]));},[]);
  return <div className="module-page">
    <div className="toolbar toolbar-between" style={{marginBottom:16}}>
     <span></span>
     <button className="btn primary" onClick={()=>generatePdf(rows)}><Download size={16}/> Download Laporan TNI AU</button>
    </div>
-   <CrudPage eyebrow="DATA ANGGOTA" title="Anggota" description="Tambah atau perbarui data anggota, status keanggotaan, lalu buat laporan pendataan organisasi." module="anggota" loader={()=>moduleService.members()} columns={columns} fields={fields}
+   <CrudPage eyebrow="DATA ANGGOTA" title="Anggota" description="Tambah atau perbarui data anggota, status keanggotaan, lalu buat laporan pendataan organisasi." module="anggota" loader={()=>moduleService.members()} filterRows={filterRows} columns={columns} fields={fields}
       toolbarExtra={
        <div className="row-actions">
-        <select className="input" value={filterJabatan} onChange={e=>setFilterJabatan(e.target.value)}>
+        <select className="input" value={filterKategori} onChange={e=>setFilterKategori(e.target.value)}>
          <option>Semua</option>
-         {jabatanFilter.map(j=><option key={j}>{j}</option>)}
-        </select>
-        <select className="input" value={filterStatus} onChange={e=>setFilterStatus(e.target.value)}>
-         <option>Semua</option>
+         <option>Pengurus</option>
          <option>Aktif</option>
          <option>Nonaktif</option>
          <option>Keluar</option>

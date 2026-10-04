@@ -13,7 +13,7 @@ function allowed(flag, role) {
   return String(flag).toUpperCase() === 'TRUE';
 }
 
-export default function CrudPage({ eyebrow, title, description, module, loader, columns, fields, normalize = x => x, toolbarExtra = null }) {
+export default function CrudPage({ eyebrow, title, description, module, loader, columns, fields, normalize = x => x, toolbarExtra = null, filterRows = null }) {
   const { session } = useAuth();
   const role = String(session?.user?.Role || 'ANGGOTA').toUpperCase();
   const { data, loading, error, reload } = useRemoteData(loader, []);
@@ -22,7 +22,10 @@ export default function CrudPage({ eyebrow, title, description, module, loader, 
   const [editing, setEditing] = useState(null);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState('');
-  const rows = useMemo(() => Array.isArray(data) ? data : [], [data]);
+  const rows = useMemo(() => {
+    const base = Array.isArray(data) ? data : [];
+    return typeof filterRows === 'function' ? filterRows(base) : base;
+  }, [data, filterRows]);
   const rule = (perm?.rows || []).find(x => String(x.Role).toUpperCase() === role && String(x.Module).toLowerCase() === String(module).toLowerCase());
   const canCreate = allowed(rule?.CanCreate, role);
   const canEdit = allowed(rule?.CanEdit, role);
