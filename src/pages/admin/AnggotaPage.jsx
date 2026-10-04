@@ -3,7 +3,7 @@ import CrudPage from '../../components/common/CrudPage';
 import {moduleService} from '../../services/module.service';
 import {Download} from 'lucide-react';
 
-const columns=[{key:"Nama",label:"Nama"},{key:"NTA",label:"NTA"},{key:"Status",label:"Status"},{key:"Krida",label:"Krida"}];
+const columns=[{key:"Nama",label:"Nama"},{key:"Jabatan",label:"Jabatan"},{key:"SekolahInstansi",label:"Sekolah / Instansi"},{key:"Status",label:"Status"}];
 const statusOptions=["Calon Anggota","Aktif","Nonaktif","Alumni","Keluar"];
 const fields=[
  {"key":"Nama","label":"Nama","required":true},
@@ -36,14 +36,15 @@ function generatePdf(rows){
  const recap=statusOrder.map(s=>({s,n:rows.filter(x=>x.Status===s).length}));
  const sectionHtml=sections.map(sec=>`
  <h3>${sec.status.toUpperCase()}</h3>
- <table><tr><th>No</th><th>Nama</th><th>NTA</th><th>Jabatan</th><th>Krida</th><th>Keterangan</th></tr>
- ${sec.rows.map((x,i)=>`<tr><td>${i+1}</td><td>${x.Nama||'-'}</td><td>${x.NTA||'-'}</td><td>${x.Jabatan||'-'}</td><td>${x.Krida||'-'}</td><td>${x.Keterangan||'-'}</td></tr>`).join('')}
+ <table><tr><th>No</th><th>Nama</th><th>Jabatan</th><th>Sekolah / Instansi</th><th>Status</th></tr>
+ ${sec.rows.map((x,i)=>`<tr><td>${i+1}</td><td>${x.Nama||'-'}</td><td>${x.Jabatan||'-'}</td><td>${x.SekolahInstansi||x.Sekolah||x.Instansi||'-'}</td><td>${sec.status}</td></tr>`).join('')}
  </table>`).join('');
  const html=`<!doctype html><html><head><title>Laporan Anggota SAKA Dirgantara</title><style>
- body{font-family:Arial;padding:30px;color:#111}h1,h2{text-align:center}table{width:100%;border-collapse:collapse;margin-top:15px;margin-bottom:25px}td,th{border:1px solid #333;padding:6px;font-size:12px}.center{text-align:center}
+ body{font-family:"Times New Roman",serif;padding:35px;color:#111}h1,h2{text-align:center}table{width:100%;border-collapse:collapse;margin-top:15px;margin-bottom:25px}td,th{border:1px solid #333;padding:6px;font-size:12px}.center{text-align:center}
  </style></head><body>
+ <div class="center"><b>SAKA DIRGANTARA</b><br>KWARTIR CABANG / PANGKALAN ....................</div><hr/>
  <h1>LAPORAN DATA ANGGOTA</h1><h2>SAKA DIRGANTARA</h2>
- <p>Dokumen pendataan anggota untuk kebutuhan administrasi organisasi dan pembina TNI AU.</p>
+ <p class="center">Dalam rangka pendataan administrasi organisasi dan pembinaan bersama TNI Angkatan Udara</p>
  <h3>REKAPITULASI ANGGOTA</h3>
  <table><tr><th>Status</th><th>Jumlah</th></tr>${recap.map(x=>`<tr><td>${x.s}</td><td>${x.n}</td></tr>`).join('')}<tr><th>Total</th><th>${total}</th></tr></table>
  ${sectionHtml}
