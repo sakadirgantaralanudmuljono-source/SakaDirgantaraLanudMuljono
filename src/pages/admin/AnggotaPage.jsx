@@ -17,7 +17,7 @@ const fields=[
 ];
 
 function generatePdf(rows){
- const statusOrder=['Alumni','Aktif','Nonaktif','Calon Anggota','Keluar'];
+ const statusOrder=['PENGURUS','AKTIF','NONAKTIF','CALON ANGGOTA','KELUAR'];
  const jabatanOrder=['Ketua','Wakil Ketua','Sekretaris','Bendahara','Pimpinan Krida'];
  const excludeAktif=['Anggota Muda Dirgantara','Anggota Dewasa Dirgantara'];
  const sorted=(items)=>[...items].sort((a,b)=>{
@@ -26,12 +26,21 @@ function generatePdf(rows){
    if(ja!==-1 || jb!==-1) return (ja===-1?99:ja)-(jb===-1?99:jb);
    return String(a.Nama||'').localeCompare(String(b.Nama||''));
  });
- const sections=statusOrder.map(status=>({
-   status,
-   rows: status==='Aktif'
-    ? sorted(rows.filter(x=>x.Status===status && !excludeAktif.includes(x.Jabatan)))
-    : sorted(rows.filter(x=>x.Status===status))
- })).filter(x=>x.rows.length);
+ const jabatanOrder=['Ketua','Ketua Saka','Wakil Ketua','Sekretaris','Bendahara','Pimpinan Krida'];
+ const withJabatan=(x)=>x.Jabatan && x.Jabatan !== 'Anggota';
+ const sortRows=(items)=>[...items].sort((a,b)=>{
+   const ja=jabatanOrder.indexOf(a.Jabatan);
+   const jb=jabatanOrder.indexOf(b.Jabatan);
+   if(ja!==-1 || jb!==-1) return (ja===-1?99:ja)-(jb===-1?99:jb);
+   return String(a.Nama||'').localeCompare(String(b.Nama||''));
+ });
+ const sections=[
+  {status:'PENGURUS',rows:sortRows(rows.filter(x=>withJabatan(x)))},
+  {status:'AKTIF',rows:sortRows(rows.filter(x=>x.Status==='Aktif' && !withJabatan(x) && !excludeAktif.includes(x.Jabatan)))},
+  {status:'NONAKTIF',rows:rows.filter(x=>x.Status==='Nonaktif')},
+  {status:'CALON ANGGOTA',rows:rows.filter(x=>x.Status==='Calon Anggota')},
+  {status:'KELUAR',rows:rows.filter(x=>x.Status==='Keluar')}
+ ].filter(x=>x.rows.length);
  const total=rows.length;
  const recap=statusOrder.map(s=>({s,n:rows.filter(x=>x.Status===s).length}));
  const sectionHtml=sections.map(sec=>`
