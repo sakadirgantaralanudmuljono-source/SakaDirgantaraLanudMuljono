@@ -17,49 +17,53 @@ const fields=[
 ];
 
 function generatePdf(rows){
- const statusOrder=['PENGURUS','AKTIF','NONAKTIF','CALON ANGGOTA','KELUAR'];
- const jabatanOrder=['Ketua','Ketua Saka','Wakil Ketua','Sekretaris','Bendahara','Pimpinan Krida'];
- const excludeAktif=['Anggota Muda Dirgantara','Anggota Dewasa Dirgantara'];
- const sorted=(items)=>[...items].sort((a,b)=>{
-   const ja=jabatanOrder.indexOf(a.Jabatan);
-   const jb=jabatanOrder.indexOf(b.Jabatan);
-   if(ja!==-1 || jb!==-1) return (ja===-1?99:ja)-(jb===-1?99:jb);
-   return String(a.Nama||'').localeCompare(String(b.Nama||''));
- });
- const withJabatan=(x)=>x.Jabatan && x.Jabatan !== 'Anggota';
+ const jabatanPengurus=[
+  'Pamong Saka Putri',
+  'Pamong Saka Putra',
+  'Instruktur',
+  'Ketua Dewan',
+  'Wakil Ketua Dewan',
+  'Sekretaris 1',
+  'Sekretaris 2',
+  'Bendahara'
+ ];
+ const jabatanOrder={
+  'Pamong Saka Putri':1,
+  'Pamong Saka Putra':2,
+  'Instruktur':3,
+  'Ketua Dewan':4,
+  'Wakil Ketua Dewan':5,
+  'Sekretaris 1':6,
+  'Sekretaris 2':7,
+  'Bendahara':8
+ };
  const sortRows=(items)=>[...items].sort((a,b)=>{
-   const ja=jabatanOrder.indexOf(a.Jabatan);
-   const jb=jabatanOrder.indexOf(b.Jabatan);
-   if(ja!==-1 || jb!==-1) return (ja===-1?99:ja)-(jb===-1?99:jb);
+   const ja=jabatanOrder[a.Jabatan]||99;
+   const jb=jabatanOrder[b.Jabatan]||99;
+   if(ja!==jb) return ja-jb;
    return String(a.Nama||'').localeCompare(String(b.Nama||''));
  });
+ const isPengurus=(x)=>jabatanPengurus.includes(x.Jabatan);
  const sections=[
-  {status:'PENGURUS',rows:sortRows(rows.filter(x=>withJabatan(x)))},
-  {status:'AKTIF',rows:sortRows(rows.filter(x=>x.Status==='Aktif' && !withJabatan(x) && !excludeAktif.includes(x.Jabatan)))},
+  {status:'PENGURUS',rows:sortRows(rows.filter(isPengurus))},
+  {status:'ANGGOTA AKTIF',rows:rows.filter(x=>x.Status==='Aktif'&&!isPengurus(x))},
   {status:'NONAKTIF',rows:rows.filter(x=>x.Status==='Nonaktif')},
   {status:'CALON ANGGOTA',rows:rows.filter(x=>x.Status==='Calon Anggota')},
   {status:'KELUAR',rows:rows.filter(x=>x.Status==='Keluar')}
  ].filter(x=>x.rows.length);
- const total=rows.length;
- const recap=statusOrder.map(s=>({s,n:rows.filter(x=>x.Status===s).length}));
+ const recap=[...sections.map(x=>({s:x.status,n:x.rows.length}))];
  const sectionHtml=sections.map(sec=>`
- <h3>${sec.status.toUpperCase()}</h3>
+ <h3>${sec.status}</h3>
  <table><tr><th>No</th><th>Nama</th><th>Jabatan</th><th>Sekolah / Instansi</th><th>Status</th></tr>
- ${sec.rows.map((x,i)=>`<tr><td>${i+1}</td><td>${x.Nama||'-'}</td><td>${x.Jabatan||'-'}</td><td>${x.SekolahInstansi||x.Sekolah||x.Instansi||'-'}</td><td>${sec.status}</td></tr>`).join('')}
+ ${sec.rows.map((x,i)=>`<tr><td>${i+1}</td><td>${x.Nama||'-'}</td><td>${x.Jabatan||'-'}</td><td>${x.SekolahInstansi||x.Sekolah||x.Instansi||'-'}</td><td>${x.Status||'-'}</td></tr>`).join('')}
  </table>`).join('');
- const html=`<!doctype html><html><head><title>Laporan Anggota SAKA Dirgantara</title><style>
- body{font-family:"Times New Roman",serif;padding:35px;color:#111}h1,h2{text-align:center}table{width:100%;border-collapse:collapse;margin-top:15px;margin-bottom:25px}td,th{border:1px solid #333;padding:6px;font-size:12px}.center{text-align:center}
- </style></head><body>
- <div class="center"><b>SAKA DIRGANTARA</b><br>KWARTIR CABANG / PANGKALAN ....................</div><hr/>
+ const html=`<!doctype html><html><head><title>Laporan Anggota SAKA Dirgantara</title><style>body{font-family:"Times New Roman",serif;padding:35px}h1,h2{text-align:center}table{width:100%;border-collapse:collapse;margin:15px 0}td,th{border:1px solid #333;padding:6px;font-size:12px}</style></head><body>
+ <div style="text-align:center"><b>SAKA DIRGANTARA</b><br>KWARTIR CABANG / PANGKALAN ....................</div><hr>
  <h1>LAPORAN DATA ANGGOTA</h1><h2>SAKA DIRGANTARA</h2>
- <p class="center">Dalam rangka pendataan administrasi organisasi dan pembinaan bersama TNI Angkatan Udara</p>
- <h3>REKAPITULASI ANGGOTA</h3>
- <table><tr><th>Status</th><th>Jumlah</th></tr>${recap.map(x=>`<tr><td>${x.s}</td><td>${x.n}</td></tr>`).join('')}<tr><th>Total</th><th>${total}</th></tr></table>
+ <h3>REKAPITULASI</h3><table><tr><th>Kategori</th><th>Jumlah</th></tr>${recap.map(x=>`<tr><td>${x.s}</td><td>${x.n}</td></tr>`).join('')}</table>
  ${sectionHtml}
- <p>Mengetahui,<br>Pembina SAKA Dirgantara<br><br><br>(________________)</p>
- </body></html>`;
- const w=window.open('','_blank');
- w.document.write(html);w.document.close();w.print();
+ <p>Mengetahui,<br>Pembina SAKA Dirgantara<br><br><br>________________</p></body></html>`;
+ const w=window.open('','_blank');w.document.write(html);w.document.close();w.print();
 }
 
 export default function Page(){
